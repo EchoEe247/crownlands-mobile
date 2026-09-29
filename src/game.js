@@ -11,6 +11,7 @@ import {diplomacySummary,relation,treaty,declareWar,makePeace} from './sim/strat
 import {populateWorld,snapshotActors} from './sim/population.js';
 import {createLivingRenderer} from './render/living.js';
 import {createWorldGeometry} from './render/world.js';
+import {fitCharacterHeight} from './render/characterBounds.js';
 import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_CAMERA} from './presentation.js';
 
 const $=id=>document.getElementById(id);
@@ -112,9 +113,10 @@ async function loadPlayer(){
     // Same proportional character family as the living guards: royal, not giant.
     const g=await load('./assets/guard.glb');
     playerVisual=g.scene; prep(playerVisual,true); player.add(playerVisual);
-    let box=new THREE.Box3().setFromObject(playerVisual),size=new THREE.Vector3();box.getSize(size);
-    const sc=KING_HEIGHT_M/Math.max(.01,size.y);playerVisual.scale.setScalar(sc);
-    box=new THREE.Box3().setFromObject(playerVisual);playerVisual.position.y-=box.min.y;
+    // IMPORTANT: fit against the humanoid body only. The guard GLB spear is
+    // ~3.39 units tall while the actual body is ~1.87; including the spear was
+    // the root cause of the undersized king in V14-V18.
+    fitCharacterHeight(playerVisual,KING_HEIGHT_M);
     playerVisual.traverse(o=>{
       const n=(o.name||'').toLowerCase();
       if(n==='thigh-l')legL=o;if(n==='thigh-r')legR=o;
@@ -123,7 +125,7 @@ async function loadPlayer(){
       if(n==='fore-l')foreL=o;if(n==='fore-r')foreR=o;
       if(n==='torso')torso=o;if(n==='head')kingHead=o;if(n==='city-guard')hips=o;
       // Remove the guard helmet/visor shells so the actual skin head remains visible under the crown.
-      if(n==='face'||n==='hair'||n==='weapon')o.visible=false;
+      if(n==='face'||n==='hair'||n.startsWith('weapon'))o.visible=false;
       if(n)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
         o.frustumCulled=false;
@@ -147,7 +149,7 @@ async function loadPlayer(){
     player.updateMatrixWorld(true);playerVisual.updateMatrixWorld(true);
     if(torso){torso.updateMatrixWorld(true);torso.attach(royalRegalia)}
     const crown=makeRoyalCrown();
-    if(kingHead){crown.position.set(0,.30,0);kingHead.add(crown)}
+    if(kingHead){const inv=1/Math.max(.01,playerVisual.scale.x);crown.scale.setScalar(inv);crown.position.set(0,.18,0);kingHead.add(crown)}
     else{crown.position.set(0,1.76,0);royalRegalia.add(crown)}
     syncCameraMode();
     if(g.animations?.length){
@@ -191,14 +193,7 @@ function addRoyalRegalia(){
   const med=new THREE.Mesh(new THREE.OctahedronGeometry(.038),gold);med.position.set(0,1.30,.215);med.castShadow=true;r.add(med);
   const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.017),jewel);gem.position.set(0,1.30,.245);r.add(gem);
 
-  // Compact shoulder caps; V14-V16 used ornaments nearly as wide as the torso.
-  for(const x of [-.205,.205]){
-    const pauldron=new THREE.Mesh(new THREE.SphereGeometry(KING_REGALIA.pauldronRadius,12,8,0,Math.PI*2,0,Math.PI*.58),gold);
-    pauldron.scale.set(1.05,.52,1.08);pauldron.position.set(x,1.39,0);pauldron.rotation.z=x<0?-.14:.14;pauldron.castShadow=true;r.add(pauldron);
-    const inset=new THREE.Mesh(new THREE.SphereGeometry(KING_REGALIA.pauldronRadius*.68,10,7,0,Math.PI*2,0,Math.PI*.52),navy);
-    inset.scale.set(1,.48,1);inset.position.set(x,1.398,.01);r.add(inset);
-  }
-
+  // Use the guard model's own fitted shoulders; no separate floating pauldrons.\n
   // Back-only cape sized to the 1.80 m NPC-family body. It starts below the
   // neck so the head/crown remain completely visible from behind.
   const cols=7,rows=7,verts=[],idx=[];
@@ -217,9 +212,7 @@ function addRoyalRegalia(){
   cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;r.add(cape);
   for(const x of [-.145,.145]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.022,10,8),gold);clasp.position.set(x,1.415,-.145);clasp.castShadow=true;r.add(clasp)}
 
-  // A narrow scabbard provides detail without crossing the silhouette.
-  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.016,.020,.38,8),navy);scabbard.position.set(.245,.64,-.012);scabbard.rotation.z=-.11;scabbard.castShadow=true;r.add(scabbard);
-  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.024,8,6),gold);pommel.position.set(.266,.84,-.012);r.add(pommel);
+  // No separate scabbard: inherited fitted belt/strap provide detail without a detached pole artifact.\n
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
@@ -673,7 +666,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v18-mobile-fit',
+    version:'v19-body-scale-root-fix',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

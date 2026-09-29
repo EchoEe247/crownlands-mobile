@@ -2,6 +2,7 @@ import * as THREE from '../../vendor/three.module.js';
 import {GLTFLoader} from '../../vendor/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from '../../vendor/addons/utils/SkeletonUtils.js';
 import {actors} from '../sim/actors.js';
+import {fitCharacterHeight} from './characterBounds.js';
 
 const ASSETS={
   guard:'./assets/guard.glb',
@@ -32,9 +33,8 @@ export async function createLivingRenderer(scene){
     const src=templates[type];
     for(let i=0;i<CAP[type];i++){
       const root=new THREE.Group(),visual=cloneSkeleton(src.scene);prep(visual);root.add(visual);
-      const box=new THREE.Box3().setFromObject(visual),size=new THREE.Vector3();box.getSize(size);
-      const baseScale=1.72/Math.max(.01,size.y);visual.scale.setScalar(baseScale);
-      box.setFromObject(visual);visual.position.y-=box.min.y;
+      const fitted=fitCharacterHeight(visual,1.72);
+      const baseScale=fitted.scale;
       const label=nameSprite('');label.position.y=2.02;root.add(label);
       const ring=new THREE.Mesh(new THREE.RingGeometry(.34,.43,22),new THREE.MeshBasicMaterial({color:0xd5b96c,transparent:true,opacity:.04,side:THREE.DoubleSide,depthWrite:false}));
       ring.rotation.x=-Math.PI/2;ring.position.y=.02;root.add(ring);

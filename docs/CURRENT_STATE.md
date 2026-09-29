@@ -1,4 +1,4 @@
-# Current State — V18 Living World
+# Current State — V19 Living World
 
 Date: 2026-09-29
 
@@ -133,3 +133,10 @@ Second, landscape objective/status labels were consuming too much of the central
 The V17 phone screenshots showed two concrete remaining defects. The body/head scale was correct, but cape/shoulder/scabbard pieces could visually detach because those accessories were anchored to the static player root while the imported guard body animated internally. V18 preserves the accessories' fitted world transform and reparents the royal-regalia group to the animated torso. The crown remains attached to the animated head.
 
 The screenshots also exposed that device rotation had no renderer/camera resize path. V18 updates the WebGL renderer and camera aspect from the current VisualViewport on resize/orientation changes, so portrait and landscape no longer reuse stale dimensions. Third-person distance is tightened to 3.95 m (3.75 m seated), while cape, pauldrons and scabbard are reduced again to keep the human silhouette readable. Landscape status bars are stacked slightly higher with reduced objective padding.
+
+
+## V19 guard-body scaling root fix
+
+The V18 real-device result still looked essentially unchanged because the fundamental scale calculation was wrong. The City Guard GLB measures about 3.39 units when its spear is included, but the humanoid body is only about 1.87 units. V14-V18 normalized the entire GLB to the requested character height, unintentionally shrinking the king's human body to roughly one meter while separately-authored royal details stayed visually dominant.
+
+V19 adds shared body-only character bounds that exclude the weapon hierarchy from scale calculations. The king is now fitted from the actual humanoid body to 1.80 m, and living guard NPCs use the same rule at 1.72 m. The spear remains available for NPC guards but no longer controls their human height; the player's full weapon subtree is hidden. This is the root-cause correction for the small-body/giant-regalia screenshots, not another camera-only adjustment.

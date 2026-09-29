@@ -12,8 +12,8 @@ export const KING_REGALIA={
   capeTopHalfWidth:.18,
   capeBottomHalfWidth:.24,
   sashHeight:.42,
-  crownRadius:.105,
-  crownSpikeHeight:.095,
+  crownRadius:.085,
+  crownSpikeHeight:.075,
 };
 
 export const KING_CAMERA={
