@@ -1,4 +1,4 @@
-# Current State — V15 Living World
+# Current State — V16 Living World
 
 Date: 2026-09-29
 
@@ -113,3 +113,10 @@ Royal identity is layered onto that normal human silhouette: deep royal-blue arm
 ## V15 mobile camera modes
 
 V15 keeps the corrected V14 NPC-scale king and replaces the temporary far verification camera with actual mobile gameplay cameras. Third-person is the default at 4.8 m with a 66° FOV; at the 1.80 m king height the nominal full body occupies about 29% of the vertical frame, leaving head/feet margin while keeping the character readable. A dedicated on-screen CAM button toggles first-person. First-person uses a 1.62 m eye height and hides the player mesh/regalia to prevent head/cape clipping. Right-side drag look works in both modes with mode-specific pitch limits.
+
+
+## V16 smooth mobile camera
+
+The V15 Pixel screenshot confirmed the king size was finally correct but exposed an overly steep orbit angle during look input. V16 lowers the default third-person orbit, reduces its maximum upward pitch so it cannot become an overhead camera, and brings the standing distance slightly closer to 4.45 m.
+
+Touch input no longer writes directly to the rendered camera angles. Swipes update yaw/pitch targets with lower mobile sensitivity, while the rendered yaw, pitch, and follow position converge with exponential damping. Horizontal damping uses wrapped angle deltas so crossing ±π never causes a long spin. First-person uses the same smoothed look targets with its wider pitch range. The result is a stable third-person follow camera with deliberate, non-jittery look movement rather than the V15 snap/overhead behavior.

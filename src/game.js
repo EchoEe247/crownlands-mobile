@@ -30,7 +30,7 @@ const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStan
 const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
-let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraPitch=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
+let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraYawTarget=0,cameraPitch=KING_CAMERA.third.defaultPitch,cameraPitchTarget=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
 const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
 let savedState=null,legacyState=null;
@@ -535,7 +535,7 @@ function sitThrone(){
   rotateBone(legL,X,-1.48);rotateBone(legR,X,-1.48);rotateBone(shinL,X,1.52);rotateBone(shinR,X,1.52);
   rotateBone(armL,Z,.16);rotateBone(armR,Z,-.16);rotateBone(foreL,X,-.48);rotateBone(foreR,X,-.48);rotateBone(torso,X,.08);
   if(hips){const r=kingRest.get(hips.name);if(r){hips.position.copy(r.p);hips.position.z+=.08}}
-  player.position.set(0,-.34,6.03);player.rotation.y=Math.PI;cameraYaw=Math.PI;cameraPitch=.17;if(cape)cape.rotation.x=-.18;
+  player.position.set(0,-.34,6.03);player.rotation.y=Math.PI;cameraYaw=cameraYawTarget=Math.PI;cameraPitch=cameraPitchTarget=.10;if(cape)cape.rotation.x=-.18;
   interactBtn.disabled=false;interactBtn.textContent='STAND';nearbyEl.textContent='Seated on the Royal Throne';objectiveEl.innerHTML=done()?'Court concluded. Stand when you are ready to begin the next day.':'You are holding court from the throne.';toast('THE KING TAKES THE THRONE')
 }
 function standThrone(){
@@ -557,6 +557,7 @@ function syncCameraMode(){
 function toggleCameraMode(){
   cameraMode=cameraMode==='third'?'first':'third';
   const cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;
+  cameraPitchTarget=THREE.MathUtils.clamp(cameraPitchTarget,cfg.minPitch,cfg.maxPitch);
   cameraPitch=THREE.MathUtils.clamp(cameraPitch,cfg.minPitch,cfg.maxPitch);
   syncCameraMode();
   toast(cameraMode==='first'?'FIRST-PERSON VIEW':'THIRD-PERSON VIEW');
@@ -575,7 +576,7 @@ function joyEnd(e){if(e.pointerId!==joyId)return;joyId=null;moveX=moveY=0;stick.
 // camera drag
 let lookId=null,lx=0,ly=0;
 renderer.domElement.onpointerdown=e=>{if(dialogueOpen||e.clientX<innerWidth*.38)return;lookId=e.pointerId;lx=e.clientX;ly=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)};
-renderer.domElement.onpointermove=e=>{if(e.pointerId!==lookId)return;cameraYaw-=(e.clientX-lx)*.0065;const cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;cameraPitch=THREE.MathUtils.clamp(cameraPitch-(e.clientY-ly)*.0045,cfg.minPitch,cfg.maxPitch);lx=e.clientX;ly=e.clientY};
+renderer.domElement.onpointermove=e=>{if(e.pointerId!==lookId)return;const dx=e.clientX-lx,dy=e.clientY-ly,cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;cameraYawTarget-=dx*KING_CAMERA.look.yawSensitivity;cameraPitchTarget=THREE.MathUtils.clamp(cameraPitchTarget-dy*KING_CAMERA.look.pitchSensitivity,cfg.minPitch,cfg.maxPitch);lx=e.clientX;ly=e.clientY};
 renderer.domElement.onpointerup=e=>{if(e.pointerId===lookId)lookId=null};renderer.domElement.onpointercancel=renderer.domElement.onpointerup;
 const keys=new Set();addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyE'&&currentTarget&&!dialogueOpen)(currentTarget.isThrone?openThrone():currentTarget.isWorldAction?currentTarget.openFn():currentTarget.isLiving?openActorAudience(currentTarget.actor):audience(currentTarget))});addEventListener('keyup',e=>keys.delete(e.code));
 function kb(){let x=0,y=0;if(keys.has('KeyW')||keys.has('ArrowUp'))y++;if(keys.has('KeyS')||keys.has('ArrowDown'))y--;if(keys.has('KeyA')||keys.has('ArrowLeft'))x--;if(keys.has('KeyD')||keys.has('ArrowRight'))x++;return{x,y}}
@@ -591,14 +592,21 @@ function move(dt){
   const k=kb();let x=k.x||moveX,y=k.y||moveY,l=Math.hypot(x,y);
   if(l>.08){if(l>1){x/=l;y/=l}const f=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)),r=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw)),v=f.multiplyScalar(y).add(r.multiplyScalar(x));tryMove(v,dt*3.35);player.rotation.y=Math.atan2(v.x,v.z);moving=true;setKingAnimation('walk')}
   else{moving=false;setKingAnimation('idle')}
-}function cam(dt){
-  const blend=1-Math.exp(-dt*11);
+}function dampAngle(current,target,lambda,dt){
+  const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
+  return current+delta*(1-Math.exp(-lambda*dt))
+}
+function cam(dt){
+  const cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;
+  cameraYaw=dampAngle(cameraYaw,cameraYawTarget,KING_CAMERA.look.angleDamping,dt);
+  cameraPitch=THREE.MathUtils.damp(cameraPitch,cameraPitchTarget,KING_CAMERA.look.angleDamping,dt);
+  cameraPitch=THREE.MathUtils.clamp(cameraPitch,cfg.minPitch,cfg.maxPitch);
+  const blend=1-Math.exp(-dt*KING_CAMERA.look.positionDamping);
   if(cameraMode==='first'){
-    const cfg=KING_CAMERA.first,eye=player.position.clone().add(new THREE.Vector3(0,seated?1.18:cfg.eyeHeight,0));
+    const eye=player.position.clone().add(new THREE.Vector3(0,seated?1.18:cfg.eyeHeight,0));
     const cp=Math.cos(cameraPitch),forward=new THREE.Vector3(-Math.sin(cameraYaw)*cp,-Math.sin(cameraPitch),-Math.cos(cameraYaw)*cp);
     camera.position.lerp(eye,blend);camera.lookAt(eye.clone().add(forward.multiplyScalar(8)));return
   }
-  const cfg=KING_CAMERA.third;
   const t=player.position.clone().add(new THREE.Vector3(0,seated?cfg.seatedTargetY:cfg.standingTargetY,0));
   const cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp);
   const p=t.clone().addScaledVector(dir,seated?cfg.seatedDistance:cfg.standingDistance);
@@ -641,11 +649,11 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v15-mobile-camera-modes',
+    version:'v16-smooth-mobile-camera',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
-    presentation:{fov:KING_CAMERA.fov,cameraMode,pitch:+cameraPitch.toFixed(3),thirdDistance:seated?KING_CAMERA.third.seatedDistance:KING_CAMERA.third.standingDistance},
+    presentation:{fov:KING_CAMERA.fov,cameraMode,yaw:+cameraYaw.toFixed(3),yawTarget:+cameraYawTarget.toFixed(3),pitch:+cameraPitch.toFixed(3),pitchTarget:+cameraPitchTarget.toFixed(3),thirdDistance:seated?KING_CAMERA.third.seatedDistance:KING_CAMERA.third.standingDistance},
     zone:currentZone,
     time:{clock:+S.clock.toFixed(2),day:simDay(),year:simYear(),season:seasonName()},
     realm:{coin:S.realm.coin,favor:S.realm.favor,security:S.realm.security,prosperity:S.realm.prosperity,stock:{...S.stock}},

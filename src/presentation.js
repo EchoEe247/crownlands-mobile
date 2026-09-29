@@ -8,14 +8,20 @@ export const KING_REGALIA_SCALE=KING_HEIGHT_M/KING_REGALIA_REFERENCE_HEIGHT_M;
 export const KING_CAMERA={
   fov:66,
   defaultMode:'third',
+  look:{
+    yawSensitivity:.0048,
+    pitchSensitivity:.0034,
+    angleDamping:14,
+    positionDamping:13,
+  },
   third:{
-    standingDistance:4.8,
-    seatedDistance:4.15,
-    standingTargetY:.96,
-    seatedTargetY:.86,
-    defaultPitch:.14,
-    minPitch:-.18,
-    maxPitch:.46,
+    standingDistance:4.45,
+    seatedDistance:4.05,
+    standingTargetY:.94,
+    seatedTargetY:.84,
+    defaultPitch:.08,
+    minPitch:-.06,
+    maxPitch:.26,
   },
   first:{
     eyeHeight:1.62,

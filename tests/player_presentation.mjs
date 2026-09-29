@@ -7,10 +7,14 @@ assert.ok(KING_HEIGHT_M<=1.82,'king may not regress to oversized world scale');
 assert.ok(Math.abs(KING_REGALIA_SCALE-1)<.01,'regalia is authored directly for the NPC-family king');
 assert.ok(KING_CAMERA.fov>=64&&KING_CAMERA.fov<=70,'camera FOV must retain useful environment context');
 assert.equal(KING_CAMERA.defaultMode,'third','mobile gameplay must start in third person');
-assert.ok(KING_CAMERA.third.standingDistance>=4.4&&KING_CAMERA.third.standingDistance<=5.4,'third-person camera must be close enough for play without crowding the king');
-assert.ok(KING_CAMERA.third.seatedDistance>=3.7,'seated third-person view must retain throne context');
+assert.ok(KING_CAMERA.third.standingDistance>=4.2&&KING_CAMERA.third.standingDistance<=4.8,'third-person camera should be close but retain full-body framing');
+assert.ok(KING_CAMERA.third.defaultPitch>=.04&&KING_CAMERA.third.defaultPitch<=.12,'default third-person pitch should sit near shoulder height');
+assert.ok(KING_CAMERA.third.maxPitch<=.28,'third-person pitch must prevent the overhead V15 view');
+assert.ok(KING_CAMERA.third.minPitch>=-.08,'third-person camera must not swing below an impractical low angle');
+assert.ok(KING_CAMERA.look.yawSensitivity<=.0055&&KING_CAMERA.look.pitchSensitivity<=.004,'touch look sensitivity must be controlled on mobile');
+assert.ok(KING_CAMERA.look.angleDamping>=10,'camera angles must use visible damping rather than direct snapping');
 assert.ok(KING_CAMERA.first.eyeHeight>=1.55&&KING_CAMERA.first.eyeHeight<=1.68,'first-person eye height must sit inside a normal adult head range');
 const nominalBodyFraction=KING_HEIGHT_M/(2*KING_CAMERA.third.standingDistance*Math.tan((KING_CAMERA.fov*Math.PI/180)/2));
-assert.ok(nominalBodyFraction>=.24&&nominalBodyFraction<=.34,'third-person full body should occupy a useful but non-clipped portion of the screen');
+assert.ok(nominalBodyFraction>=.29&&nominalBodyFraction<=.36,'third-person full body should remain readable without clipping');
 
 console.log(JSON.stringify({ok:true,NPC_HEIGHT_M,KING_HEIGHT_M,ratio,nominalBodyFraction,KING_REGALIA_SCALE,KING_CAMERA},null,2));
