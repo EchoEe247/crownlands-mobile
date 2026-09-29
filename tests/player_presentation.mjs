@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA} from '../src/presentation.js';
 
-assert.ok(KING_HEIGHT_M>=1.85&&KING_HEIGHT_M<=1.98,'king should be tall but human-scale');
-assert.ok(KING_REGALIA_SCALE<1&&KING_REGALIA_SCALE>.8,'regalia must follow normalized king scale');
-assert.ok(KING_CAMERA.standingDistance>=6.5,'standing third-person camera must frame the full king');
-assert.ok(KING_CAMERA.standingDistance<=8,'standing camera must stay close enough for character readability');
-assert.ok(KING_CAMERA.seatedDistance>=5,'seated camera must not crowd the throne pose');
-assert.ok(KING_CAMERA.standingTargetY<KING_HEIGHT_M,'camera target must remain below the crown');
+assert.ok(KING_HEIGHT_M>=1.82&&KING_HEIGHT_M<=1.90,'king should be tall but close to ordinary adult scale');
+assert.ok(KING_HEIGHT_M/1.72<=1.12,'king must stay close to the 1.72 m living-NPC baseline');
+assert.ok(KING_REGALIA_SCALE<.9&&KING_REGALIA_SCALE>.8,'regalia must track the normalized king body');
+assert.ok(KING_CAMERA.fov>=62&&KING_CAMERA.fov<=68,'camera FOV should avoid oversized close framing');
+assert.ok(KING_CAMERA.standingDistance>=11.5&&KING_CAMERA.standingDistance<=13,'standing camera must frame the full king with environment context');
+assert.ok(KING_CAMERA.seatedDistance>=7.5,'seated camera must show the throne pose without crowding');
+assert.ok(KING_CAMERA.defaultPitch<=.22,'default camera angle must not exaggerate the avatar');
+const nominalScreenFraction=KING_HEIGHT_M/(2*KING_CAMERA.standingDistance*Math.tan((KING_CAMERA.fov*Math.PI/180)/2));
+assert.ok(nominalScreenFraction<.15,'nominal full-body framing must leave substantial environment context');
 
-console.log(JSON.stringify({ok:true,KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA},null,2));
+console.log(JSON.stringify({ok:true,KING_HEIGHT_M,npcRatio:KING_HEIGHT_M/1.72,nominalScreenFraction,KING_REGALIA_SCALE,KING_CAMERA},null,2));

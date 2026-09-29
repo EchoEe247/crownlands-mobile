@@ -57,7 +57,7 @@ def import_king(x, seated=False):
     carrier=bpy.context.object
     for r in roots:
         r.parent=carrier
-    # normalize to the runtime intended tall-adult height (1.92 m)
+    # normalize to the runtime intended tall-adult height (1.86 m)
     xs=[];ys=[];zs=[]
     for o in imported:
         if o.type=='MESH':
@@ -65,7 +65,7 @@ def import_king(x, seated=False):
                 w=o.matrix_world@Vector(c)
                 xs.append(w.x);ys.append(w.y);zs.append(w.z)
     h=max(zs)-min(zs)
-    sc=1.92/max(h,.01);carrier.scale=(sc,sc,sc)
+    sc=1.86/max(h,.01);carrier.scale=(sc,sc,sc)
     bpy.context.view_layer.update()
     # recompute min z and shift
     zs=[]
@@ -99,7 +99,7 @@ def import_king(x, seated=False):
             # align pelvis to seat; carrier Z is adjusted below from visual bbox
             carrier.location.z=-.18
             carrier.location.y=-.05
-    add_crown(carrier,1.90 if not seated else 1.90)
+    add_crown(carrier,1.84 if not seated else 1.84)
     return carrier
 
 # floor

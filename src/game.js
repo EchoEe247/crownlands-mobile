@@ -22,7 +22,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFi
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;game.appendChild(renderer.domElement);window.__crownlands3dBooted=true;window.dispatchEvent(new Event('crownlands3dready'));
 
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x90a7bd);scene.fog=new THREE.Fog(0x90a7bd,28,205);
-const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.08,280),loader=new GLTFLoader(),clock=new THREE.Clock();
+const camera=new THREE.PerspectiveCamera(KING_CAMERA.fov,innerWidth/innerHeight,.08,280),loader=new GLTFLoader(),clock=new THREE.Clock();
 const hemi=new THREE.HemisphereLight(0xd9eaff,0x594330,2);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffe5b2,3);sun.position.set(-7,13,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-12,right:12,top:12,bottom:-12,near:1,far:32});scene.add(sun);
 const fill=new THREE.PointLight(0xffbd68,12,12,2);fill.position.set(0,3.3,5.7);scene.add(fill);
@@ -30,7 +30,7 @@ const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStan
 const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
-let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=.28,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
+let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=KING_CAMERA.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
 const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
 let savedState=null,legacyState=null;
@@ -104,8 +104,8 @@ async function loadPlayer(){
     const g=await load('./assets/king-knight.glb');
     playerVisual=g.scene; prep(playerVisual,true); player.add(playerVisual);
     let box=new THREE.Box3().setFromObject(playerVisual),size=new THREE.Vector3();box.getSize(size);
-    // A king should read as tall, not gigantic. Normalize to a 1.92 m adult
-    // and preserve the model's authored proportions instead of widening X/Z.
+    // Match the living-world human scale: slightly taller than the 1.72 m NPC
+    // baseline, but still an ordinary adult rather than a giant.
     const sc=KING_HEIGHT_M/Math.max(.01,size.y); playerVisual.scale.setScalar(sc);
     box=new THREE.Box3().setFromObject(playerVisual); playerVisual.position.y-=box.min.y;
     playerVisual.traverse(o=>{
@@ -174,11 +174,11 @@ function addRoyalRegalia(){
   // and read as a floating red rectangle when the body failed to render.
   const cols=5,rows=6,verts=[],idx=[];
   for(let y=0;y<rows;y++){
-    const t=y/(rows-1),yy=1.78-t*1.18,half=.27+t*.28;
+    const t=y/(rows-1),yy=1.78-t*.90,half=.30+t*.30;
     for(let x=0;x<cols;x++){
       const u=x/(cols-1),xx=(u*2-1)*half;
       const curve=Math.pow(Math.abs(u-.5)*2,1.6)*.045;
-      const zz=-.23-.08*t+curve;
+      const zz=-.34-.07*t+curve;
       verts.push(xx,yy,zz)
     }
   }
@@ -605,10 +605,11 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v10-living-world',
+    version:'v13-player-presentation',
     ready,
     fps:Math.round(fpsEMA),
-    player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated},
+    player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
+    presentation:{fov:KING_CAMERA.fov,distance:seated?KING_CAMERA.seatedDistance:KING_CAMERA.standingDistance,targetY:seated?KING_CAMERA.seatedTargetY:KING_CAMERA.standingTargetY,pitch:+cameraPitch.toFixed(3)},
     zone:currentZone,
     time:{clock:+S.clock.toFixed(2),day:simDay(),year:simYear(),season:seasonName()},
     realm:{coin:S.realm.coin,favor:S.realm.favor,security:S.realm.security,prosperity:S.realm.prosperity,stock:{...S.stock}},

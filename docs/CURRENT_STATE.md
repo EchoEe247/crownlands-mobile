@@ -1,4 +1,4 @@
-# Current State — V12 Living World
+# Current State — V13 Living World
 
 Date: 2026-09-29
 
@@ -94,3 +94,10 @@ Pixel screenshots exposed that the king's procedural cape/belt were visible whil
 The first real Pixel screenshot after the visibility fix showed that the playable king read as physically gigantic and crowded the camera. V12 normalizes the imported king to 1.92 m, removes the extra 7% X/Z widening, scales the crown/cape/belt as one regalia group, and backs the standing third-person camera from 5.35 m to 7.10 m (5.55 m seated). The goal is a visibly tall adult king, not an oversized giant.
 
 Presentation constants now live in `src/presentation.js` and are covered by `tests/player_presentation.mjs`. Blender pose QA is also normalized to the same 1.92 m target.
+
+
+## V13 real-device framing correction
+
+The V12 Pixel screenshot showed that world-unit normalization alone was not enough: although the king was only modestly taller than NPCs in world units, third-person perspective made him dominate the actual phone frame and clip at the top. V13 is tuned from that real screenshot rather than from nominal meter math.
+
+The king is now 1.86 m versus the living NPC baseline of 1.72 m (about 8% taller), the camera is widened to 64° and moved to 12.2 m standing / 8.2 m seated, and the default pitch is reduced. The cape is also shorter, wider, and farther behind the body so it reads as a mantle instead of a red tab between the legs. Debug snapshots now expose the active presentation parameters.
