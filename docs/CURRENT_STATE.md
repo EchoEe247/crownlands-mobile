@@ -1,4 +1,4 @@
-# Current State — V10 Living World
+# Current State — V12 Living World
 
 Date: 2026-09-29
 
@@ -61,6 +61,7 @@ The shipped bundle now integrates the recovered Sonnet 5.5 simulation foundation
 - diplomacy state
 - save/resume
 - Blackmere reachability and wartime muster
+- king presentation invariants
 
 Runtime browser probe reports:
 - 113 actors
@@ -87,3 +88,9 @@ Do not revert the simulation architecture to the old route-only NPC prototype.
 ## V11 king visibility hotfix
 
 Pixel screenshots exposed that the king's procedural cape/belt were visible while the imported body was completely transparent. Root cause: the source king GLB encoded alpha=0 on all three body materials. V11 normalizes those materials to opaque, disables player skinned-mesh frustum culling, keeps the crown on the stable player root, and replaces the wraparound cylinder cape with a back-only curved cloth mesh. Automated asset tests now fail if the king materials regress to transparent.
+
+## V12 king proportion / framing correction
+
+The first real Pixel screenshot after the visibility fix showed that the playable king read as physically gigantic and crowded the camera. V12 normalizes the imported king to 1.92 m, removes the extra 7% X/Z widening, scales the crown/cape/belt as one regalia group, and backs the standing third-person camera from 5.35 m to 7.10 m (5.55 m seated). The goal is a visibly tall adult king, not an oversized giant.
+
+Presentation constants now live in `src/presentation.js` and are covered by `tests/player_presentation.mjs`. Blender pose QA is also normalized to the same 1.92 m target.

@@ -11,6 +11,7 @@ import {diplomacySummary,relation,treaty,declareWar,makePeace} from './sim/strat
 import {populateWorld,snapshotActors} from './sim/population.js';
 import {createLivingRenderer} from './render/living.js';
 import {createWorldGeometry} from './render/world.js';
+import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA} from './presentation.js';
 
 const $=id=>document.getElementById(id);
 const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
@@ -30,7 +31,7 @@ const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
 let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=.28,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
-let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
+let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
 const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
 let savedState=null,legacyState=null;
 try{savedState=JSON.parse(localStorage.getItem('crownlands_state_v2')||'null')}catch{}
@@ -96,11 +97,16 @@ const throne=buildThrone();
 
 async function loadEnvironment(){try{const g=await load('./assets/royal-courtyard.glb');prep(g.scene);world.add(g.scene)}catch(e){console.error(e)}loadedEssential++;checkReady()}
 async function loadPlayer(){
+  royalRegalia=new THREE.Group();
+  royalRegalia.scale.setScalar(KING_REGALIA_SCALE);
+  player.add(royalRegalia);
   try{
     const g=await load('./assets/king-knight.glb');
     playerVisual=g.scene; prep(playerVisual,true); player.add(playerVisual);
     let box=new THREE.Box3().setFromObject(playerVisual),size=new THREE.Vector3();box.getSize(size);
-    const sc=2.18/Math.max(.01,size.y); playerVisual.scale.set(sc*1.07,sc,sc*1.07);
+    // A king should read as tall, not gigantic. Normalize to a 1.92 m adult
+    // and preserve the model's authored proportions instead of widening X/Z.
+    const sc=KING_HEIGHT_M/Math.max(.01,size.y); playerVisual.scale.setScalar(sc);
     box=new THREE.Box3().setFromObject(playerVisual); playerVisual.position.y-=box.min.y;
     playerVisual.traverse(o=>{
       const n=(o.name||'').toLowerCase();
@@ -133,7 +139,7 @@ async function loadPlayer(){
     // Keep the crown on the player root instead of parenting it to the
     // imported head bone. The source rig uses an unusual head transform and
     // could hide/offset the crown on Android.
-    const crown=makeRoyalCrown();crown.position.set(0,2.16,0);player.add(crown)
+    const crown=makeRoyalCrown();crown.position.set(0,2.16,0);royalRegalia.add(crown)
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
       const idle=g.animations.find(a=>a.name.toLowerCase().endsWith('|idle'))||g.animations.find(a=>a.name.toLowerCase().includes('idle'));
@@ -147,7 +153,7 @@ async function loadPlayer(){
   }catch(e){
     console.error(e);
     const body=new THREE.Mesh(new THREE.CapsuleGeometry(.4,1.1,6,12),new THREE.MeshStandardMaterial({color:0x303a50,metalness:.55,roughness:.35}));
-    body.position.y=1.1;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,2.05,0);player.add(c);
+    body.position.y=1.1;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,2.16,0);royalRegalia.add(c);
   }
   loadedEssential++;checkReady()
 }
@@ -158,10 +164,11 @@ function makeRoyalCrown(){
   const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.035),ruby);gem.position.set(0,.08,.19);g.add(gem);return g
 }
 function addRoyalRegalia(){
+  const regaliaRoot=royalRegalia||player;
   const gold=new THREE.MeshStandardMaterial({color:0xdcb04a,metalness:.76,roughness:.25});
   const ruby=new THREE.MeshStandardMaterial({color:0x711a29,roughness:.72,side:THREE.DoubleSide});
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.028,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,1.02,0);player.add(belt);
-  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);med.position.set(0,1.48,.31);med.castShadow=true;player.add(med);
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.028,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,1.02,0);regaliaRoot.add(belt);
+  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);med.position.set(0,1.48,.31);med.castShadow=true;regaliaRoot.add(med);
 
   // Back-only cloth cape. The old partial cylinder wrapped around the front
   // and read as a floating red rectangle when the body failed to render.
@@ -181,8 +188,8 @@ function addRoyalRegalia(){
   const capeGeo=new THREE.BufferGeometry();
   capeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
   capeGeo.setIndex(idx);capeGeo.computeVertexNormals();
-  cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;player.add(cape);
-  for(const x of [-.25,.25]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),gold);clasp.position.set(x,1.72,-.19);clasp.castShadow=true;player.add(clasp)}
+  cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;regaliaRoot.add(cape);
+  for(const x of [-.25,.25]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),gold);clasp.position.set(x,1.72,-.19);clasp.castShadow=true;regaliaRoot.add(clasp)}
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
@@ -560,7 +567,7 @@ function move(dt){
   const k=kb();let x=k.x||moveX,y=k.y||moveY,l=Math.hypot(x,y);
   if(l>.08){if(l>1){x/=l;y/=l}const f=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)),r=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw)),v=f.multiplyScalar(y).add(r.multiplyScalar(x));tryMove(v,dt*3.35);player.rotation.y=Math.atan2(v.x,v.z);moving=true;setKingAnimation('walk')}
   else{moving=false;setKingAnimation('idle')}
-}function cam(dt){const t=player.position.clone().add(new THREE.Vector3(0,seated?1.05:1.48,0)),cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp),p=t.clone().addScaledVector(dir,seated?4.45:5.35);camera.position.lerp(p,1-Math.exp(-dt*8));camera.lookAt(t)}
+}function cam(dt){const t=player.position.clone().add(new THREE.Vector3(0,seated?KING_CAMERA.seatedTargetY:KING_CAMERA.standingTargetY,0)),cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp),p=t.clone().addScaledVector(dir,seated?KING_CAMERA.seatedDistance:KING_CAMERA.standingDistance);camera.position.lerp(p,1-Math.exp(-dt*8));camera.lookAt(t)}
 function proximity(){
  attackBtn.disabled=seated||(!raidActive&&!S.powers.valemar.war);
  if(seated){currentTarget=throne;interactBtn.disabled=false;interactBtn.textContent='STAND';nearbyEl.textContent='Seated on the Royal Throne';return}
