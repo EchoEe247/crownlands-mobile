@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Crownlands — The King</title>
+<link rel="stylesheet" href="./src/style.css">
+<link rel="modulepreload" href="./dist/game.fast.js?v=9">
+</head>
+<body>
+<div id="game"></div>
+
+<div id="hud">
+  <div class="royal-chip"><span class="crown">♛</span><div><b>KING ALDRIC</b><small>THE CROWNLANDS · YEAR 1</small></div></div>
+  <div id="stats">
+    <div><span>COIN</span><b id="gold">600</b></div>
+    <div><span>FAVOR</span><b id="favor">55</b></div>
+    <div><span>SECURITY</span><b id="security">62</b></div>
+    <div><span>PROSPERITY</span><b id="prosperity">50</b></div>
+  </div>
+</div>
+
+<div id="objective">Hold court. Walk to a subject and tap <b>AUDIENCE</b>.</div>
+<div id="zoneName">ROYAL COURT</div>
+<div id="warStatus" class="hidden">KINGDOM SECURE</div>
+<div id="guardStatus">ROYAL GUARDS · PATROL THE COURT</div>
+<div id="nearby"></div>
+
+<div id="joystick" aria-label="Movement joystick"><div id="stick"></div></div>
+<div id="lookHint">DRAG RIGHT SIDE TO LOOK</div>
+<button id="attack" type="button" disabled>ATTACK</button>
+<button id="orders" type="button">ORDERS</button>
+<button id="interact" type="button" disabled>AUDIENCE</button>
+
+<div id="dialogue" class="hidden" role="dialog" aria-modal="true">
+  <div class="speaker"><span id="speakerRole"></span><b id="speakerName"></b></div>
+  <p id="dialogueText"></p>
+  <div id="choices"></div>
+  <button id="leaveDialogue" type="button">End audience</button>
+</div>
+
+<div id="toast" class="hidden" aria-live="polite"></div>
+
+<div id="intro">
+  <div class="intro-card">
+    <div class="crest">♛</div>
+    <h1>YOU ARE THE KING.</h1>
+    <p>No climb to the throne. No tutorial peasant. The Crownlands are already yours.</p>
+    <div class="oath">Your court waits in the royal courtyard. Subjects will ask for decrees. Your choices change treasury, favor, security and prosperity.</div>
+    <button id="begin" type="button">ENTER YOUR COURT</button>
+    <small>Mobile: left thumb moves · drag the right side to turn · tap AUDIENCE near a subject</small>
+  </div>
+</div>
+
+<script>
+window.__crownlands3dBooted=false;
+window.__crownlandsBootError='';
+const enter=document.getElementById('begin');
+enter.disabled=false;
+enter.addEventListener('click',()=>{
+  document.getElementById('intro').classList.add('hidden');
+  if(!window.__crownlands3dBooted){
+    const t=document.getElementById('toast');
+    t.textContent='LOADING CROWNLANDS…';
+    t.classList.remove('hidden');
+    setTimeout(()=>{if(window.__crownlands3dBooted)t.classList.add('hidden')},350);
+  }
+});
+window.addEventListener('crownlands3dready',()=>{const t=document.getElementById('toast');t.classList.add('hidden');});
+window.addEventListener('error',(e)=>{
+  if(((e.filename||'').includes('game.js')||(e.filename||'').includes('game.fast.js')) || String(e.message||'').includes('WebGL')){
+    window.__crownlandsBootError=String(e.message||'3D startup failed');
+    const t=document.getElementById('toast');
+    t.textContent='3D STARTUP ERROR — REFRESH ONCE';
+    t.classList.remove('hidden');
+  }
+});
+</script>
+<script type="module" src="./dist/game.fast.js?v=9"></script>
+</body>
+</html>

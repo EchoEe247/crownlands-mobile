@@ -1,0 +1,9 @@
+node_modules/
+npm-debug.log*
+*.log
+*.blend
+*.blend1
+qa_*.png
+qa_*.jpg
+qa_*.mp4
+.DS_Store
