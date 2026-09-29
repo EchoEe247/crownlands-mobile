@@ -31,4 +31,10 @@ function walk(dir){
   }
 }
 for(const r of roots)walk(r);
+const king=glbJson('assets/king-knight.glb');
+for(const m of king.materials||[]){
+  const alpha=m.pbrMetallicRoughness?.baseColorFactor?.[3]??1;
+  assert.ok(alpha>.95,'king material '+(m.name||'?')+' must not be transparent');
+  assert.notEqual(m.alphaMode,'BLEND','king material '+(m.name||'?')+' must render opaque');
+}
 console.log(JSON.stringify({ok:true,glbs:checked,externalImageRefs:external},null,2));

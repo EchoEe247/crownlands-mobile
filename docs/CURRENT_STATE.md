@@ -83,3 +83,7 @@ The next real-device pass should focus on:
 7. optionally a Blackmere war/campaign
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
+
+## V11 king visibility hotfix
+
+Pixel screenshots exposed that the king's procedural cape/belt were visible while the imported body was completely transparent. Root cause: the source king GLB encoded alpha=0 on all three body materials. V11 normalizes those materials to opaque, disables player skinned-mesh frustum culling, keeps the crown on the stable player root, and replaces the wraparound cylinder cape with a back-only curved cloth mesh. Automated asset tests now fail if the king materials regress to transparent.

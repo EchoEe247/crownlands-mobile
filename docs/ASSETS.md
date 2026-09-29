@@ -60,3 +60,7 @@ Every new non-original asset should be added to this manifest with:
 - license
 - local filename
 - modifications made
+
+## Local asset normalization
+
+The Quaternius `king-knight.glb` source carried `baseColorFactor` alpha values of 0 on Armor, Skin, and Boots despite containing no alpha textures. That made the complete skinned body disappear under Three.js while procedural regalia remained visible. The committed GLB is normalized to opaque alpha=1, and the runtime also forces the king materials opaque as a defensive compatibility fix.

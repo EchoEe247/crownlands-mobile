@@ -100,7 +100,7 @@ async function loadPlayer(){
     const g=await load('./assets/king-knight.glb');
     playerVisual=g.scene; prep(playerVisual,true); player.add(playerVisual);
     let box=new THREE.Box3().setFromObject(playerVisual),size=new THREE.Vector3();box.getSize(size);
-    const sc=2.18/Math.max(.01,size.y); playerVisual.scale.setScalar(sc);
+    const sc=2.18/Math.max(.01,size.y); playerVisual.scale.set(sc*1.07,sc,sc*1.07);
     box=new THREE.Box3().setFromObject(playerVisual); playerVisual.position.y-=box.min.y;
     playerVisual.traverse(o=>{
       const n=(o.name||'').toLowerCase();
@@ -115,16 +115,25 @@ async function loadPlayer(){
       if(n==='hips')hips=o;if(n==='torso')torso=o;
       if(o.isBone)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
+        // Quaternius source GLB shipped these materials with alpha=0 even though
+        // there is no alpha texture. Normalize them explicitly so the king
+        // cannot disappear on Android/Three.js.
+        o.frustumCulled=false;
         const mats=Array.isArray(o.material)?o.material:[o.material];
         for(const m of mats){
-          if((m.name||'').toLowerCase().includes('armor')){m.color.set(0x303a50);m.metalness=.68;m.roughness=.3}
-          if((m.name||'').toLowerCase().includes('boots')){m.color.set(0x24160f);m.roughness=.7}
+          m.opacity=1;m.transparent=false;m.alphaTest=0;m.depthWrite=true;m.visible=true;
+          const mn=(m.name||'').toLowerCase();
+          if(mn.includes('armor')){m.color.set(0x303a50);m.metalness=.68;m.roughness=.3}
+          else if(mn.includes('skin')){m.color.set(0xbf8b5a);m.metalness=0;m.roughness=.72}
+          else if(mn.includes('boots')){m.color.set(0x24160f);m.roughness=.7}
         }
       }
     });
     addRoyalRegalia();
-    const head=playerVisual.getObjectByName('Head');
-    const crown=makeRoyalCrown(); if(head){crown.position.set(0,.28,0);head.add(crown)}else{crown.position.set(0,2.08,0);player.add(crown)}
+    // Keep the crown on the player root instead of parenting it to the
+    // imported head bone. The source rig uses an unusual head transform and
+    // could hide/offset the crown on Android.
+    const crown=makeRoyalCrown();crown.position.set(0,2.16,0);player.add(crown)
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
       const idle=g.animations.find(a=>a.name.toLowerCase().endsWith('|idle'))||g.animations.find(a=>a.name.toLowerCase().includes('idle'));
@@ -149,11 +158,31 @@ function makeRoyalCrown(){
   const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.035),ruby);gem.position.set(0,.08,.19);g.add(gem);return g
 }
 function addRoyalRegalia(){
-  const gold=new THREE.MeshStandardMaterial({color:0xdcb04a,metalness:.76,roughness:.25}),ruby=new THREE.MeshStandardMaterial({color:0x711a29,roughness:.66,side:THREE.DoubleSide});
+  const gold=new THREE.MeshStandardMaterial({color:0xdcb04a,metalness:.76,roughness:.25});
+  const ruby=new THREE.MeshStandardMaterial({color:0x711a29,roughness:.72,side:THREE.DoubleSide});
   const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.028,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,1.02,0);player.add(belt);
   const med=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);med.position.set(0,1.48,.31);med.castShadow=true;player.add(med);
-  const capeGeo=new THREE.CylinderGeometry(.32,.55,1.24,18,4,true,Math.PI*.05,Math.PI*.9);
-  cape=new THREE.Mesh(capeGeo,ruby);cape.position.set(0,1.24,.17);cape.rotation.z=Math.PI;cape.castShadow=true;player.add(cape)
+
+  // Back-only cloth cape. The old partial cylinder wrapped around the front
+  // and read as a floating red rectangle when the body failed to render.
+  const cols=5,rows=6,verts=[],idx=[];
+  for(let y=0;y<rows;y++){
+    const t=y/(rows-1),yy=1.78-t*1.18,half=.27+t*.28;
+    for(let x=0;x<cols;x++){
+      const u=x/(cols-1),xx=(u*2-1)*half;
+      const curve=Math.pow(Math.abs(u-.5)*2,1.6)*.045;
+      const zz=-.23-.08*t+curve;
+      verts.push(xx,yy,zz)
+    }
+  }
+  for(let y=0;y<rows-1;y++)for(let x=0;x<cols-1;x++){
+    const a=y*cols+x,b=a+1,c=a+cols,d=c+1;idx.push(a,c,b,b,c,d)
+  }
+  const capeGeo=new THREE.BufferGeometry();
+  capeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  capeGeo.setIndex(idx);capeGeo.computeVertexNormals();
+  cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;player.add(cape);
+  for(const x of [-.25,.25]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),gold);clasp.position.set(x,1.72,-.19);clasp.castShadow=true;player.add(clasp)}
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
