@@ -48,7 +48,7 @@ def build_throne(x):
 
 def import_king(x, seated=False):
     before=set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=os.path.join(base,'assets','king-knight.glb'))
+    bpy.ops.import_scene.gltf(filepath=os.path.join(base,'assets','guard.glb'))
     imported=[o for o in bpy.data.objects if o not in before]
     roots=[o for o in imported if o.parent is None]
     root=roots[0] if roots else imported[0]
@@ -57,7 +57,7 @@ def import_king(x, seated=False):
     carrier=bpy.context.object
     for r in roots:
         r.parent=carrier
-    # normalize to the runtime intended tall-adult height (1.86 m)
+    # normalize to the runtime intended NPC-family king height (1.80 m)
     xs=[];ys=[];zs=[]
     for o in imported:
         if o.type=='MESH':
@@ -65,7 +65,7 @@ def import_king(x, seated=False):
                 w=o.matrix_world@Vector(c)
                 xs.append(w.x);ys.append(w.y);zs.append(w.z)
     h=max(zs)-min(zs)
-    sc=1.86/max(h,.01);carrier.scale=(sc,sc,sc)
+    sc=1.80/max(h,.01);carrier.scale=(sc,sc,sc)
     bpy.context.view_layer.update()
     # recompute min z and shift
     zs=[]
@@ -136,7 +136,7 @@ scene.render.engine='BLENDER_EEVEE'
 scene.render.resolution_x=1280;scene.render.resolution_y=720;scene.render.resolution_percentage=100
 scene.render.image_settings.file_format='PNG'
 scene.render.filepath=os.path.join(base,'qa_king_pose.png')
-scene.world=bpy.data.worlds.new('World') if scene.world is None else scene.world; scene.world.color=(0.025,0.028,0.035)
+scene.world=bpy.data.worlds.new('World') if scene.world is None else scene.world;scene.world.color=(0.025,0.028,0.035)
 scene.render.film_transparent=False
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(base,'qa_king_pose.blend'))
 bpy.ops.render.render(write_still=True)

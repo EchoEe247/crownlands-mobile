@@ -1,4 +1,4 @@
-# Current State — V13 Living World
+# Current State — V14 Living World
 
 Date: 2026-09-29
 
@@ -101,3 +101,10 @@ Presentation constants now live in `src/presentation.js` and are covered by `tes
 The V12 Pixel screenshot showed that world-unit normalization alone was not enough: although the king was only modestly taller than NPCs in world units, third-person perspective made him dominate the actual phone frame and clip at the top. V13 is tuned from that real screenshot rather than from nominal meter math.
 
 The king is now 1.86 m versus the living NPC baseline of 1.72 m (about 8% taller), the camera is widened to 64° and moved to 12.2 m standing / 8.2 m seated, and the default pitch is reduced. The cape is also shorter, wider, and farther behind the body so it reads as a mantle instead of a red tab between the legs. Debug snapshots now expose the active presentation parameters.
+
+
+## V14 NPC-family king rebuild
+
+V13 still looked oversized on the actual Pixel frame. V14 stops trying to rescue the Quaternius knight by scaling it. The playable king now uses the same CC0 3DAssets.dev City Guard character family used by normal living-world humans, normalized to 1.80 m versus the NPC baseline of 1.72 m (about 4.7% taller).
+
+Royal identity is layered onto that normal human silhouette: deep royal-blue armor/clothing, brighter polished gold, dark iron/leather, a jeweled crown, ruby diagonal sash, chest medallion, layered pauldrons, gold belt/buckle, broad back cape, collar, and scabbard/pommel detail. Camera distance is increased to 20 m standing so the player no longer dominates the phone frame. This is now the intended player-art direction: ordinary-human proportions first, royal detail second.

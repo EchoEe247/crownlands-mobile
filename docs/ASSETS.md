@@ -7,11 +7,11 @@ Crownlands prefers assets that are clearly reusable and redistributable. The cur
 | File / group | Source | License / status | Use |
 |---|---|---|---|
 | `assets/royal-courtyard.glb` | 3DAssets.dev — Royal Court and Throne Palace / Royal Courtyard Audience | CC0 1.0 | core royal court environment |
-| `assets/guard.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / City Guard With Spear | CC0 1.0 | Royal Guard / soldier base |
+| `assets/guard.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / City Guard With Spear | CC0 1.0 | Royal Guard / soldier base + V14 playable king body |
 | `assets/merchant.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / Market Trader | CC0 1.0 | merchant / court NPC |
 | `assets/innkeeper.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / Innkeeper | CC0 1.0 | steward / civilian NPC |
 | `assets/mage.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / City Mage | CC0 1.0 | chancellor / court NPC |
-| `assets/king-knight.glb` | Quaternius Animated Knight Pack, GLB obtained through `ilrein/warptracker` | CC0 | current animated king body |
+| `assets/king-knight.glb` | Quaternius Animated Knight Pack, GLB obtained through `ilrein/warptracker` | CC0 | legacy king prototype retained for provenance/reference; not the V14 player body |
 | `assets/castle/*.glb` | Kenney Castle Kit, mirrored through `Hidencod/tge-assets` | CC0 | gates, towers, walls, bridge, siege props, trees, rocks |\n| `assets/town/*` | Kenney Fantasy Town Kit 2.0 | CC0 | market stalls, cart, lanterns, fountains, mills and trees |\n| `assets/town/Textures/colormap.png` | Kenney Fantasy Town Kit 2.0 GLB texture | CC0 | shared town palette texture |
 | `vendor/three.module.js` and `vendor/addons/*` | Three.js r160 | MIT | renderer/loaders/runtime |
 

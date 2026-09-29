@@ -101,95 +101,100 @@ async function loadPlayer(){
   royalRegalia.scale.setScalar(KING_REGALIA_SCALE);
   player.add(royalRegalia);
   try{
-    const g=await load('./assets/king-knight.glb');
+    // Same proportional character family as the living guards: royal, not giant.
+    const g=await load('./assets/guard.glb');
     playerVisual=g.scene; prep(playerVisual,true); player.add(playerVisual);
     let box=new THREE.Box3().setFromObject(playerVisual),size=new THREE.Vector3();box.getSize(size);
-    // Match the living-world human scale: slightly taller than the 1.72 m NPC
-    // baseline, but still an ordinary adult rather than a giant.
-    const sc=KING_HEIGHT_M/Math.max(.01,size.y); playerVisual.scale.setScalar(sc);
-    box=new THREE.Box3().setFromObject(playerVisual); playerVisual.position.y-=box.min.y;
+    const sc=KING_HEIGHT_M/Math.max(.01,size.y);playerVisual.scale.setScalar(sc);
+    box=new THREE.Box3().setFromObject(playerVisual);playerVisual.position.y-=box.min.y;
     playerVisual.traverse(o=>{
       const n=(o.name||'').toLowerCase();
-      if(n==='upperleg.l'||n.includes('upperleg.l'))legL=o;
-      if(n==='upperleg.r'||n.includes('upperleg.r'))legR=o;
-      if(n==='lowerleg.l'||n.includes('lowerleg.l'))shinL=o;
-      if(n==='lowerleg.r'||n.includes('lowerleg.r'))shinR=o;
-      if(n==='upperarm.l'||n.includes('upperarm.l'))armL=o;
-      if(n==='upperarm.r'||n.includes('upperarm.r'))armR=o;
-      if(n==='lowerarm.l'||n.includes('lowerarm.l'))foreL=o;
-      if(n==='lowerarm.r'||n.includes('lowerarm.r'))foreR=o;
-      if(n==='hips')hips=o;if(n==='torso')torso=o;
-      if(o.isBone)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
+      if(n==='thigh-l')legL=o;if(n==='thigh-r')legR=o;
+      if(n==='shin-l')shinL=o;if(n==='shin-r')shinR=o;
+      if(n==='arm-l')armL=o;if(n==='arm-r')armR=o;
+      if(n==='fore-l')foreL=o;if(n==='fore-r')foreR=o;
+      if(n==='torso')torso=o;if(n==='city-guard')hips=o;
+      if(n)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
-        // Quaternius source GLB shipped these materials with alpha=0 even though
-        // there is no alpha texture. Normalize them explicitly so the king
-        // cannot disappear on Android/Three.js.
         o.frustumCulled=false;
         const mats=Array.isArray(o.material)?o.material:[o.material];
         for(const m of mats){
           m.opacity=1;m.transparent=false;m.alphaTest=0;m.depthWrite=true;m.visible=true;
           const mn=(m.name||'').toLowerCase();
-          if(mn.includes('armor')){m.color.set(0x303a50);m.metalness=.68;m.roughness=.3}
-          else if(mn.includes('skin')){m.color.set(0xbf8b5a);m.metalness=0;m.roughness=.72}
-          else if(mn.includes('boots')){m.color.set(0x24160f);m.roughness=.7}
+          if(mn.includes('blue')){m.color.set(0x162a58);m.metalness=.12;m.roughness=.48}
+          else if(mn.includes('gold')){m.color.set(0xe0b64b);m.metalness=.74;m.roughness=.24}
+          else if(mn.includes('iron')){m.color.set(0x303743);m.metalness=.72;m.roughness=.30}
+          else if(mn.includes('dirt')){m.color.set(0x3a2116);m.roughness=.74}
+          else if(mn.includes('timber')){m.color.set(0x28150d);m.roughness=.66}
+          else if(mn.includes('skin')){m.color.set(0xbf8b62);m.metalness=0;m.roughness=.72}
         }
       }
     });
     addRoyalRegalia();
-    // Keep the crown on the player root instead of parenting it to the
-    // imported head bone. The source rig uses an unusual head transform and
-    // could hide/offset the crown on Android.
-    const crown=makeRoyalCrown();crown.position.set(0,2.16,0);royalRegalia.add(crown)
+    const crown=makeRoyalCrown();crown.position.set(0,1.84,0);royalRegalia.add(crown);
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
-      const idle=g.animations.find(a=>a.name.toLowerCase().endsWith('|idle'))||g.animations.find(a=>a.name.toLowerCase().includes('idle'));
-      const walk=g.animations.find(a=>a.name.toLowerCase().includes('walking'))||g.animations.find(a=>a.name.toLowerCase().includes('run'));
+      const idle=g.animations.find(a=>/^idle$/i.test(a.name))||g.animations[0];
+      const walk=g.animations.find(a=>/arm-swing/i.test(a.name))||idle;
+      const attack=g.animations.find(a=>/weapon-raise/i.test(a.name))||walk;
       if(idle){kingIdleAction=playerMixer.clipAction(idle);kingIdleAction.play()}
       if(walk){kingWalkAction=playerMixer.clipAction(walk)}
-      const attack=g.animations.find(a=>a.name.toLowerCase().includes('swordattack'))||g.animations.find(a=>a.name.toLowerCase().includes('attack'));
       if(attack){kingAttackAction=playerMixer.clipAction(attack);kingAttackAction.setLoop(THREE.LoopOnce,1);kingAttackAction.clampWhenFinished=true}
       mixers.push(playerMixer);
     }
   }catch(e){
     console.error(e);
-    const body=new THREE.Mesh(new THREE.CapsuleGeometry(.4,1.1,6,12),new THREE.MeshStandardMaterial({color:0x303a50,metalness:.55,roughness:.35}));
-    body.position.y=1.1;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,2.16,0);royalRegalia.add(c);
+    const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,1.08,6,12),new THREE.MeshStandardMaterial({color:0x162a58,metalness:.42,roughness:.4}));
+    body.position.y=.9;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,1.84,0);royalRegalia.add(c);
   }
   loadedEssential++;checkReady()
 }
 function makeRoyalCrown(){
-  const g=new THREE.Group(),gold=new THREE.MeshStandardMaterial({color:0xe3b94e,metalness:.82,roughness:.22}),ruby=new THREE.MeshStandardMaterial({color:0x9a1830,metalness:.25,roughness:.3});
-  const band=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.12,16,1,true),gold);g.add(band);
-  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.045,.2,5),gold);p.position.set(Math.cos(a)*.16,.14,Math.sin(a)*.16);g.add(p)}
-  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.035),ruby);gem.position.set(0,.08,.19);g.add(gem);return g
+  const g=new THREE.Group(),gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(.125,.125,.09,18,1,true),gold);band.castShadow=true;g.add(band);
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.027,.15,5),gold);p.position.set(Math.cos(a)*.105,.105,Math.sin(a)*.105);p.castShadow=true;g.add(p)}
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.022),ruby);gem.position.set(Math.sin(a)*.126,.01,Math.cos(a)*.126);g.add(gem)}
+  return g
 }
 function addRoyalRegalia(){
-  const regaliaRoot=royalRegalia||player;
-  const gold=new THREE.MeshStandardMaterial({color:0xdcb04a,metalness:.76,roughness:.25});
-  const ruby=new THREE.MeshStandardMaterial({color:0x711a29,roughness:.72,side:THREE.DoubleSide});
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.31,.028,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,1.02,0);regaliaRoot.add(belt);
-  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.07),gold);med.position.set(0,1.48,.31);med.castShadow=true;regaliaRoot.add(med);
+  const r=royalRegalia||player;
+  const gold=new THREE.MeshStandardMaterial({color:0xdfb451,metalness:.78,roughness:.23});
+  const ruby=new THREE.MeshStandardMaterial({color:0x72172a,roughness:.68,side:THREE.DoubleSide});
+  const navy=new THREE.MeshStandardMaterial({color:0x14264c,metalness:.18,roughness:.5});
+  const jewel=new THREE.MeshStandardMaterial({color:0xb71935,metalness:.18,roughness:.25});
 
-  // Back-only cloth cape. The old partial cylinder wrapped around the front
-  // and read as a floating red rectangle when the body failed to render.
-  const cols=5,rows=6,verts=[],idx=[];
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.245,.022,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,.86,0);r.add(belt);
+  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.10,.085,.04),gold);buckle.position.set(0,.86,.24);buckle.castShadow=true;r.add(buckle);
+
+  const sash=new THREE.Mesh(new THREE.BoxGeometry(.105,.68,.025),ruby);sash.position.set(.07,1.18,.235);sash.rotation.z=-.42;sash.castShadow=true;r.add(sash);
+  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.06),gold);med.position.set(0,1.30,.285);med.castShadow=true;r.add(med);
+  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.027),jewel);gem.position.set(0,1.30,.34);r.add(gem);
+
+  for(const x of [-.31,.31]){
+    const pauldron=new THREE.Mesh(new THREE.SphereGeometry(.15,12,8,0,Math.PI*2,0,Math.PI*.58),gold);
+    pauldron.scale.set(1.1,.55,1.15);pauldron.position.set(x,1.43,0);pauldron.rotation.z=x<0?-.18:.18;pauldron.castShadow=true;r.add(pauldron);
+    const inset=new THREE.Mesh(new THREE.SphereGeometry(.105,10,7,0,Math.PI*2,0,Math.PI*.52),navy);
+    inset.scale.set(1.05,.5,1.08);inset.position.set(x,1.445,.02);r.add(inset);
+  }
+
+  const cols=7,rows=7,verts=[],idx=[];
   for(let y=0;y<rows;y++){
-    const t=y/(rows-1),yy=1.78-t*.90,half=.30+t*.30;
+    const t=y/(rows-1),yy=1.53-t*.92,half=.34+t*.17;
     for(let x=0;x<cols;x++){
       const u=x/(cols-1),xx=(u*2-1)*half;
-      const curve=Math.pow(Math.abs(u-.5)*2,1.6)*.045;
-      const zz=-.34-.07*t+curve;
+      const curve=Math.pow(Math.abs(u-.5)*2,1.7)*.035;
+      const zz=-.25-.06*t+curve;
       verts.push(xx,yy,zz)
     }
   }
-  for(let y=0;y<rows-1;y++)for(let x=0;x<cols-1;x++){
-    const a=y*cols+x,b=a+1,c=a+cols,d=c+1;idx.push(a,c,b,b,c,d)
-  }
-  const capeGeo=new THREE.BufferGeometry();
-  capeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-  capeGeo.setIndex(idx);capeGeo.computeVertexNormals();
-  cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;regaliaRoot.add(cape);
-  for(const x of [-.25,.25]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),gold);clasp.position.set(x,1.72,-.19);clasp.castShadow=true;regaliaRoot.add(clasp)}
+  for(let y=0;y<rows-1;y++)for(let x=0;x<cols-1;x++){const a=y*cols+x,b=a+1,c=a+cols,d=c+1;idx.push(a,c,b,b,c,d)}
+  const capeGeo=new THREE.BufferGeometry();capeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));capeGeo.setIndex(idx);capeGeo.computeVertexNormals();
+  cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;r.add(cape);
+  for(const x of [-.24,.24]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.036,10,8),gold);clasp.position.set(x,1.49,-.20);clasp.castShadow=true;r.add(clasp)}
+
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,8,22),gold);collar.rotation.x=Math.PI/2;collar.position.set(0,1.48,0);r.add(collar);
+  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,.62,8),navy);scabbard.position.set(.29,.62,-.02);scabbard.rotation.z=-.15;scabbard.castShadow=true;r.add(scabbard);
+  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),gold);pommel.position.set(.335,.94,-.02);r.add(pommel);
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
@@ -605,7 +610,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v13-player-presentation',
+    version:'v14-npc-scale-king',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
