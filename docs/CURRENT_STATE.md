@@ -1,157 +1,85 @@
-# Current State / Stopping Point
+# Current State — V10 Living World
 
-Date of this handoff: 2026-09-29.
+Date: 2026-09-29
 
-## What works now
+## Verified implementation
 
-- local Android/Chrome launch through a Termux HTTP server
-- fast bundled startup path
-- third-person touch movement/camera
-- animated knight-based king
-- crown/regalia treatment
-- throne sit/stand code path
-- court audiences and petitions
-- decree effects on realm stats
-- persistent localStorage realm state
-- four connected castle/settlement districts
-- route-based autonomous NPC motion
-- six Royal Guards
-- recruitable field army
-- persistent guard and army orders
-- market/barracks/gate/village royal decisions
-- raid spawning and defender combat
-- optional king attack action
-- day/evening lighting
-- basic procedural audio
-- local/offline asset loading
+The shipped bundle now integrates the recovered Sonnet 5.5 simulation foundation and the follow-on fixes.
 
-## What is explicitly not finished
+### Simulation
+- 113 persistent actors
+- 30+ civilian role planners
+- autonomous work, meals, sleep, rest and social routines
+- near/far simulation LOD
+- royal orders interrupt and later return actors to normal schedules
+- safe A* navigation with fail-closed route behavior
+- persistent actor state and active-order restore
 
-### King presentation
+### Military
+- 18 Royal Guards, three rotating shifts, 6 normally active
+- two-guard king escort
+- throne/gate/patrol special orders with automatic return to routine
+- Lord Marshal, captains, sergeants and field soldiers
+- garrison training/meals/rest/maintenance
+- rival Blackmere military routines
+- wartime Blackmere muster and Crown campaign path
 
-The old white/priest-like king was replaced. The new Quaternius knight body is a better base, but final Pixel visual review is still required for:
+### Economy and policy
+- grain, wood, iron, arms and meal production
+- population food consumption
+- taxes and garrison wages
+- configurable tax/ration policy
+- farm investment
+- daily ledger
 
-- overall royal silhouette
-- crown placement
-- cape/regalia
-- walk presentation
-- seated body/throne alignment
+### World / politics
+- expanded Royal Castle and surrounding districts
+- Lower Village, Millbrook, Kingsbridge, Stonehollow, Ashwood and Blackmere
+- House Valemar, House Kestrel, Stonehollow Guild and Ashwood Company
+- diplomacy/relations/treaties
+- declare war / peace
+- campaign against Blackmere
+- raids and direct king combat
 
-Do not declare this solved until it looks correct on the actual Pixel.
+### Mobile engineering
+- Pixel-class render scale cap
+- progressive loading
+- bounded 20-character render pool while 113 actors remain simulated
+- local assets only at runtime
+- save on visibility/page exit
+- bundled esbuild output
+- debug snapshot available at `window.__crownlandsDebug.snapshot()`
 
-### NPC life simulation
+## Automated evidence
 
-Current NPC autonomy is route/wander based. It is **not yet the intended life simulation**.
+`npm test` covers:
+- navigation and collision
+- actor schedule/order resume
+- living population
+- guard shift size
+- daily physical economy
+- diplomacy state
+- save/resume
+- Blackmere reachability and wartime muster
 
-Next major simulation milestone should introduce:
+Runtime browser probe reports:
+- 113 actors
+- 20 visible/render slots
+- 6/18 Royal Guards on duty
+- 27 Crown military personnel
+- no JavaScript boot exception before the known automation WebGL limitation
 
-- schedules
-- work
-- sleep
-- meals
-- rest
-- social/idle behaviors
-- homes/quarters
-- task interruption/resumption
-- jobs and supervisors
+## Known limitation
 
-### Guard rotation
+Termux desktop Chromium loses/fails its WebGL context even with SwiftShader/Xvfb. It cannot be used as authoritative visual evidence. Pixel Android Chrome has previously rendered Crownlands correctly and remains the final in-game visual acceptance route.
 
-Current build has six active guards.
+The next real-device pass should focus on:
+1. king standing/walking/cape
+2. throne pose
+3. frame rate in the expanded castle/market
+4. two-guard escort and shift handoff
+5. travel toward the village/road
+6. one raid
+7. optionally a Blackmere war/campaign
 
-Target is a larger roster with:
-
-- shifts
-- off-duty guards
-- sleep
-- meals
-- training
-- post rotation
-- emergency recall
-
-### Army organization
-
-Current army is a functional combat group, not a complete military society.
-
-Need:
-
-- Marshal / commander
-- subordinate officers
-- formations
-- barracks/quarters
-- supply
-- equipment
-- duty rotations
-- scouting
-- marching
-- injury/recovery
-- strategic orders
-
-### Castle economy
-
-Stats exist, but the intended physical economy does not yet exist.
-
-Need:
-
-- workers
-- wages
-- food
-- farms
-- storage
-- blacksmith/workshops
-- market supply
-- taxes/rents
-- trade
-- logistics
-- consumption
-
-### Wider world
-
-Need:
-
-- rival castle farther down the world
-- rival ruler and internal simulation
-- roads and travel
-- other settlements/factions
-- diplomacy
-- alliances
-- coordinated campaigns
-- sieges
-- strategic world simulation
-
-## QA status
-
-### Passed
-
-- source JavaScript syntax checks
-- esbuild bundle generation
-- local static serving
-- public GLB assets load from local project
-- prior Pixel Chrome builds render the Three.js game
-- progressive boot significantly reduced initial loading delay
-
-### Tooling limitation
-
-The Termux desktop/headless Chromium build currently available for agent automation has no usable WebGL context. Attempts with:
-
-- regular headless
-- SwiftShader
-- Ozone headless
-- Xvfb
-
-still reported no WebGL context.
-
-This should be treated as a **QA-tool limitation**, not a game-render failure. Actual Pixel Chrome screenshots are authoritative.
-
-## Next recommended development sequence
-
-1. Pixel V9 visual check of king standing/walking/throne.
-2. Fix any king/throne proportions found.
-3. Implement Actor + Schedule + Task + Order state model.
-4. Convert current NPC routes into jobs/life schedules.
-5. Expand Royal Guard roster with shifts and quarters.
-6. Add Marshal + military chain of command.
-7. Implement physical castle economy.
-8. Build rival castle/world simulation.
-9. Add diplomacy/alliance/war layer.
-10. Final performance, save, collision, audio, visual polish.
+Do not revert the simulation architecture to the old route-only NPC prototype.

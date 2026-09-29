@@ -1,161 +1,118 @@
 # Crownlands Mobile
 
-**Crownlands** is a mobile-first 3D medieval king simulation built to run locally on Android. The player is **the king from the first second** — not a peasant, not a recruit, and not a ruler represented only by menus.
+**Crownlands** is a mobile-first 3D medieval king simulation for Android. You begin as the crowned king and physically inhabit a living realm instead of ruling through menus alone.
 
-The design goal is a living medieval realm where the player can physically walk through the castle and surrounding lands, sit on the throne, hold court, issue orders, inspect the economy, command guards and armies, negotiate with other powers, and personally take part in crises or battles when desired.
+Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-> Current status: playable prototype / active development. The architecture and core game loop are established, but the game is **not yet considered finished**.
+## V10 living-world build
 
-## Non-negotiable design pillars
+The current playable build has moved beyond the original courtyard prototype.
 
-1. **Mobile game first.** The target is Android, not desktop. Desktop controls exist only as a development fallback.
-2. **Embodied king.** The player is a visible third-person king in the 3D world and begins already crowned.
-3. **Living NPCs.** NPCs are not idle menu terminals. When the king is not ordering them, they work, travel, eat, rest, socialize, train, guard, trade, sleep, and otherwise follow their own lives.
-4. **Royal authority is always available.** The king can interrupt normal routines and issue orders to individuals, groups, officers, guards, or the army. When an order ends, actors return to an appropriate autonomous routine.
-5. **A real kingdom, not a courtyard demo.** Castle life, military organization, economy, villages, enemies, diplomacy, logistics, alliances, and war should become one connected simulation.
-6. **High visual floor.** Use strong free/public assets when they improve the game. Do not accept generic low-effort placeholder visuals as the final presentation.
-7. **Local ownership.** No AWS VM, paid proprietary game, or cloud runtime is required to play.
+- embodied third-person king with touch movement/camera
+- throne sit/stand and court petitions
+- **113 persistent simulated actors**
+- jobs, meals, sleep, rest, social time, training, patrols and work schedules
+- royal orders temporarily override an NPC's normal life, then the NPC resumes it
+- **18 Royal Guards in three rotating 8-hour shifts**; normally 6 are on duty
+- two-guard personal escort while the rest of the shift remains at work
+- Lord Marshal, captains, sergeants and a field army
+- Royal Guard orders: routine, escort, patrol, throne guard, main gate
+- Army orders: routine, drill, muster, gate defense, march with king
+- personal orders to visible NPCs: report to court, follow, wait, return to duty, role-specific work
+- physical production loop: grain, timber, iron, arms, meals, taxes and garrison wages
+- royal policies for taxation, rations and farm investment
+- diplomacy with House Valemar, House Kestrel, Stonehollow Guild and Ashwood Company
+- rival **Blackmere Keep** with its own guards/soldiers and wartime behavior
+- Crown campaign order to march on Blackmere during war
+- raids, defender combat and optional king combat
+- expanded connected world: Royal Castle, Lower Village, Millbrook, Kingsbridge, Stonehollow, Ashwood Camp and Blackmere
+- day/year/season clock, weather state and day/night lighting
+- save/resume for realm, king position, actors and active royal orders
+- mobile renderer pool: the full population simulates while only the most relevant nearby actors are rendered
 
-## Current playable systems
+## Play locally
 
-The current build already includes:
-
-- third-person mobile movement and touch camera
-- a crowned animated king
-- royal court / throne interaction
-- petitions and decrees
-- treasury, favor, security, and prosperity
-- four connected areas:
-  - Royal Court
-  - Barracks & Training Yard
-  - Main Gate & Market
-  - Lower Village & Farms
-- NPC route-based autonomous movement
-- six Royal Guards
-- recruitable field soldiers
-- guard orders:
-  - escort the king
-  - patrol the castle
-  - guard the throne
-  - hold the main gate
-- army orders:
-  - drill
-  - muster
-  - reinforce the gate
-  - march with the king
-- barracks, market, gate, and village decisions
-- persistent realm state
-- recurring raids / defense loop
-- optional king combat
-- basic collision
-- day/evening lighting cycle
-- procedural WebAudio cues
-- progressive asset loading for mobile startup
-
-## Target device and runtime
-
-Primary target during development:
-
-- **Google Pixel 6a**
-- Android
-- game played in **mobile Chrome**
-- local server hosted from **Termux**
-- development/asset work may use **Ubuntu via proot-distro inside Termux**
-- Blender 4.x headless is available through that Ubuntu environment for asset QA
-- Three.js/WebGL is the current runtime
-
-Typical local play URL:
-
-```
-http://127.0.0.1:5205/
-```
-
-Start a server from the repository root:
+From Termux:
 
 ```sh
+cd ~/MainWorkspace/crownlands-mobile
 ./scripts/serve.sh
 ```
 
-Then open the URL in Android Chrome.
+Open in Android Chrome:
 
-## Build
+```
+http://127.0.0.1:5205/?v=10
+```
 
-The repository commits a ready-to-play bundle in `dist/`. To rebuild it:
+Controls:
+
+- left thumb: move
+- drag right side: camera
+- **AUDIENCE / USE**: interact with nearby people and places
+- **ORDERS**: guard, army, royal policy and diplomacy
+- **ATTACK**: contextual combat
+
+## Build and test
 
 ```sh
 npm install
+npm test
 npm run build
 ```
 
-Or directly:
+The generated playable bundle is `dist/game.fast.js`.
 
-```sh
-npx esbuild src/game.js --bundle --minify --format=esm --target=chrome120 --outfile=dist/game.fast.js
-```
-
-## Repository layout
+## Repository structure
 
 ```text
-crownlands-mobile/
-├── index.html               # mobile entry point
-├── src/
-│   ├── game.js              # authoritative game source
-│   └── style.css            # mobile HUD/UI
-├── dist/
-│   └── game.fast.js         # generated playable bundle
-├── assets/
-│   ├── castle/              # reusable CC0 castle/world assets
-│   └── *.glb                # characters/court environment
-├── vendor/                  # vendored Three.js runtime pieces
-├── docs/
-│   ├── VISION.md
-│   ├── NPC_SIMULATION.md
-│   ├── TECHNICAL.md
-│   ├── CURRENT_STATE.md
-│   ├── ROADMAP.md
-│   └── ASSETS.md
-├── tools/
-│   └── qa/                  # local visual/asset QA scripts
-├── scripts/
-│   ├── build.sh
-│   └── serve.sh
-└── AGENTS.md                # operating contract for future agents
+src/
+  game.js                 # game integration / mobile controls / interactions
+  layout.js               # world, buildings, roads, districts, collision
+  nav.js                  # navigation graph + A*
+  util.js
+  sim/
+    core.js               # realm/calendar/weather/state/event bus
+    actors.js             # actors, tasks, royal orders, LOD simulation
+    schedules.js          # civilian autonomous schedules
+    military.js           # guard shifts and army/rival military routines
+    economy.js            # production, food, tax and wage loop
+    population.js         # persistent realm population
+    strategy.js           # diplomacy and rival strategy
+  render/
+    world.js              # expanded procedural world geometry
+    living.js             # bounded mobile actor render pool
+assets/
+  castle/
+  town/
+tests/
+  simulation.mjs
+  living_world.mjs
+  save_resume.mjs
+  war_campaign.mjs
+docs/
 ```
 
-## What Crownlands is trying to become
+## Product invariants
 
-The finished experience should feel closer to a **living medieval movie world under the player's rule** than a conventional menu-heavy strategy game.
+- **Mobile first.** Desktop support is development convenience only.
+- **You are already king.**
+- **NPCs live without you.** Orders redirect their lives; orders do not create them.
+- **Royal authority stays available.** Individuals, guard units, officers and armies can be redirected.
+- **Royal Guard and army are separate organizations.**
+- **The player's castle is the strongest local seat of power, not the only power.**
+- **World actions should be visible in 3D whenever practical instead of becoming spreadsheet-only mechanics.**
 
-The player's castle is intended to be the strongest seat of power in the region. A rival castle and other powers exist farther out in the world. The king can form alliances, coordinate armies, receive emissaries, manage internal politics, protect roads and settlements, respond to raids, and eventually go to war. Guards and soldiers have barracks, quarters, shifts, meals, rest, training, and command structure instead of existing only when the player presses a button.
+See `AGENTS.md`, `docs/VISION.md`, and `docs/NPC_SIMULATION.md` before making major changes.
 
-The king remains exceptional: every other actor has a life and role, but royal orders can override those routines.
+## QA status
 
-See [docs/VISION.md](docs/VISION.md) and [docs/NPC_SIMULATION.md](docs/NPC_SIMULATION.md) for the full design.
+Automated tests currently cover navigation, actor scheduling/order interruption, economy, guard shifts, save/resume, diplomacy and the Blackmere campaign path. The local URL and bundled runtime boot are verified.
 
-## Current quality gate
-
-The game is **not done** until it passes real-device Pixel testing for:
-
-- stable mobile performance
-- strong king proportions and animation
-- believable throne sitting
-- comfortable touch controls
-- NPC schedules that visibly feel alive
-- guard shift/rest rotation
-- army organization and command hierarchy
-- economy simulation
-- rival power / diplomacy / war
-- meaningful exploration beyond the castle core
-- collision/navigation polish
-- save/resume reliability
-- final visual/audio polish
-
-## Visual QA note
-
-Pixel Chrome is the authoritative gameplay renderer. The Termux Chromium build currently available to automation does not expose a working WebGL context, even with SwiftShader/Xvfb attempts. Local Blender renders can be used for model/pose inspection, but in-game visual acceptance must ultimately be checked in actual Android Chrome.
+The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
 
 ## Assets and licensing
 
-The current game intentionally uses redistributable public assets, mainly CC0, plus vendored MIT Three.js runtime code. See [docs/ASSETS.md](docs/ASSETS.md).
+Current third-party game assets are redistributable public assets, primarily CC0, plus MIT Three.js runtime code. See `docs/ASSETS.md` for provenance.
 
-The project itself currently has **no repository-level software license selected**. Public visibility does not by itself grant reuse rights to the project code. Third-party assets retain their documented licenses.
+The repository itself does not currently declare a project-level software license; public visibility does not automatically grant reuse rights to the project code.

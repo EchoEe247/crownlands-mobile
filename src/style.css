@@ -9,3 +9,6 @@
 #attack:disabled{opacity:.3}
 #warStatus{position:fixed;top:132px;left:50%;transform:translateX(-50%);z-index:6;background:rgba(83,20,20,.82);border:1px solid rgba(242,142,114,.65);border-radius:16px;padding:6px 12px;font:bold 9px Georgia,serif;letter-spacing:1.1px;color:#ffe1d8;pointer-events:none;backdrop-filter:blur(6px)}
 @media(max-width:620px){#warStatus{top:119px}}
+.command-report{display:flex;flex-direction:column;gap:3px;margin:6px 0 10px;padding:9px 11px;border:1px solid rgba(222,193,116,.32);border-radius:11px;background:rgba(27,27,34,.72);font:10px/1.35 system-ui,sans-serif;color:#e7e2d5}
+.command-report b{font:700 11px Georgia,serif;letter-spacing:1px;color:#f2d997;margin-bottom:2px}
+.command-report span{opacity:.88}

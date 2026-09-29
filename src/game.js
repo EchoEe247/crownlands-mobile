@@ -1,6 +1,16 @@
 import * as THREE from '../vendor/three.module.js';
 import { GLTFLoader } from '../vendor/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from '../vendor/addons/utils/SkeletonUtils.js';
+import {WORLD,ROUTES,STALLS,zoneAt,blockedAt as realmBlockedAt} from './layout.js';
+import {S,defaultState,hydrateState,serializeState,advanceTime,HOUR_SECONDS,day as simDay,year as simYear,seasonName,on as simOn,clampRealm as clampSimRealm} from './sim/core.js';
+import {actors,player as simPlayer,stepAll,issueOrder,cancelOrder,makeActor,placeByPlan,activityOf} from './sim/actors.js';
+import './sim/schedules.js';
+import './sim/military.js';
+import './sim/economy.js';
+import {diplomacySummary,relation,treaty,declareWar,makePeace} from './sim/strategy.js';
+import {populateWorld,snapshotActors} from './sim/population.js';
+import {createLivingRenderer} from './render/living.js';
+import {createWorldGeometry} from './render/world.js';
 
 const $=id=>document.getElementById(id);
 const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
@@ -10,23 +20,43 @@ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(inne
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;game.appendChild(renderer.domElement);window.__crownlands3dBooted=true;window.dispatchEvent(new Event('crownlands3dready'));
 
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x90a7bd);scene.fog=new THREE.Fog(0x90a7bd,25,82);
-const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.08,140),loader=new GLTFLoader(),clock=new THREE.Clock();
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x90a7bd);scene.fog=new THREE.Fog(0x90a7bd,28,205);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.08,280),loader=new GLTFLoader(),clock=new THREE.Clock();
 const hemi=new THREE.HemisphereLight(0xd9eaff,0x594330,2);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffe5b2,3);sun.position.set(-7,13,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-12,right:12,top:12,bottom:-12,near:1,far:32});scene.add(sun);
 const fill=new THREE.PointLight(0xffbd68,12,12,2);fill.position.set(0,3.3,5.7);scene.add(fill);
 const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStandardMaterial({color:0xa9987c,roughness:.92}));ground.rotation.x=-Math.PI/2;ground.position.y=-.035;ground.receiveShadow=true;scene.add(ground);
 const world=new THREE.Group();scene.add(world);
-const player=new THREE.Group();player.position.set(0,0,4.4);player.rotation.y=Math.PI;scene.add(player);
+const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
-let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=.28,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false;
+let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=.28,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
-const mixers=[],npcs=[],guardUnits=[],armyUnits=[],raiders=[],worldInteractables=[],kingRest=new Map();
-const defaultRealm={gold:600,favor:55,security:62,prosperity:50,day:1,armySize:8,guardMode:'patrol',armyMode:'drill'};
-let realm=(()=>{try{return {...defaultRealm,...JSON.parse(localStorage.getItem('crownlands_realm_v1'))}}catch{return {...defaultRealm}}})();
-const save=()=>localStorage.setItem('crownlands_realm_v1',JSON.stringify(realm));
-function clampRealm(){realm.gold=Math.max(0,Math.round(realm.gold));for(const k of ['favor','security','prosperity'])realm[k]=THREE.MathUtils.clamp(Math.round(realm[k]),0,100)}
-function renderStats(){for(const k of ['gold','favor','security','prosperity'])$(k).textContent=realm[k];document.querySelector('.royal-chip small').textContent='THE CROWNLANDS · DAY '+realm.day}renderStats();
+const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
+let savedState=null,legacyState=null;
+try{savedState=JSON.parse(localStorage.getItem('crownlands_state_v2')||'null')}catch{}
+try{legacyState=JSON.parse(localStorage.getItem('crownlands_realm_v1')||'null')}catch{}
+if(savedState)hydrateState(savedState);else{
+  const seed=defaultState();
+  if(legacyState){seed.realm.coin=legacyState.gold??seed.realm.coin;seed.realm.favor=legacyState.favor??seed.realm.favor;seed.realm.security=legacyState.security??seed.realm.security;seed.realm.prosperity=legacyState.prosperity??seed.realm.prosperity;seed.clock=8+Math.max(0,(legacyState.day||1)-1)*24;seed.guard.mode=legacyState.guardMode||'routine';seed.army.directive=legacyState.armyMode||'routine';seed.army.size=legacyState.armySize||20}
+  hydrateState(seed)
+}
+populateWorld();
+const realm={
+  get gold(){return S.realm.coin},set gold(v){S.realm.coin=v},
+  get favor(){return S.realm.favor},set favor(v){S.realm.favor=v},
+  get security(){return S.realm.security},set security(v){S.realm.security=v},
+  get prosperity(){return S.realm.prosperity},set prosperity(v){S.realm.prosperity=v},
+  get day(){return simDay()},
+  get armySize(){return S.army.size},set armySize(v){S.army.size=v},
+  get guardMode(){return S.guard.mode},set guardMode(v){S.guard.mode=v},
+  get armyMode(){return S.army.directive},set armyMode(v){S.army.directive=v}
+};
+const save=()=>{
+  S.king.x=player.position.x;S.king.z=player.position.z;S.king.yaw=player.rotation.y;S.king.seated=seated;
+  snapshotActors();localStorage.setItem('crownlands_state_v2',JSON.stringify(serializeState()))
+};
+function clampRealm(){clampSimRealm()}
+function renderStats(){for(const k of ['gold','favor','security','prosperity'])$(k).textContent=realm[k];document.querySelector('.royal-chip small').textContent='THE CROWNLANDS · '+seasonName().toUpperCase()+' · DAY '+simDay()+' · YEAR '+simYear()}renderStats();
 
 let audioCtx=null,worldLightTime=.18;
 function initAudio(){try{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}catch{}}
@@ -34,7 +64,7 @@ function tone(freq,dur=.18,gain=.025,type='sine',delay=0){if(!audioCtx)return;co
 function royalChime(){tone(392,.25,.025,'triangle',0);tone(523,.3,.025,'triangle',.12);tone(659,.35,.02,'triangle',.24)}
 function alarmHorn(){tone(130,.55,.035,'sawtooth',0);tone(110,.55,.03,'sawtooth',.48)}
 function swordSound(){tone(420,.09,.018,'sawtooth',0);tone(190,.12,.015,'triangle',.06)}
-function updateLighting(dt){worldLightTime=(worldLightTime+dt/165)%1;const a=worldLightTime*Math.PI*2,day=.56+.36*Math.sin(a);sun.position.set(Math.cos(a)*16,5+Math.max(0,Math.sin(a))*15,Math.sin(a)*13);sun.intensity=1.25+Math.max(.05,day)*2.1;hemi.intensity=.8+Math.max(.05,day)*1.45;const c=new THREE.Color().setHSL(.58,.28,THREE.MathUtils.clamp(.22+day*.38,.24,.62));scene.background.copy(c);scene.fog.color.copy(c)}
+function updateLighting(dt){worldLightTime=(S.clock%24)/24;const a=(worldLightTime-.25)*Math.PI*2,day=.56+.36*Math.sin(a);sun.position.set(Math.cos(a)*16,5+Math.max(0,Math.sin(a))*15,Math.sin(a)*13);sun.intensity=1.25+Math.max(.05,day)*2.1;hemi.intensity=.8+Math.max(.05,day)*1.45;const c=new THREE.Color().setHSL(.58,.28,THREE.MathUtils.clamp(.22+day*.38,.24,.62));scene.background.copy(c);scene.fog.color.copy(c)}
 const petitions={
  captain:[
   {text:'Your Majesty, raiders crossed the eastern ford at dawn. The villages ask for the Crown’s protection.',choices:[{title:'Ride out the Royal Guard',note:'−70 coin · +16 security · +6 favor',delta:{gold:-70,security:16,favor:6}},{title:'Fortify the villages',note:'−45 coin · +9 security · +5 prosperity',delta:{gold:-45,security:9,prosperity:5}}]},
@@ -132,59 +162,116 @@ function setKingAnimation(state){
   const next=state==='walk'?kingWalkAction:kingIdleAction,prev=kingAnimState==='walk'?kingWalkAction:kingIdleAction;
   if(next){next.reset().play();if(prev&&prev!==next)next.crossFadeFrom(prev,.18,true)} kingAnimState=state
 }
-async function loadNPC(s){const r=new THREE.Group();r.position.fromArray(s.pos);r.rotation.y=Math.PI+s.rot;scene.add(r);try{const g=await load(s.asset);prep(g.scene,true);r.add(g.scene);if(g.animations.length){const m=new THREE.AnimationMixer(g.scene),clip=g.animations.find(a=>a.name.toLowerCase().includes('idle'))||g.animations[0];m.clipAction(clip).play();mixers.push(m)}}catch(e){console.error(e)}r.add(label(s.name));const ring=new THREE.Mesh(new THREE.RingGeometry(.55,.67,32),new THREE.MeshBasicMaterial({color:0xf3cc68,transparent:true,opacity:.12,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.025;r.add(ring);npcs.push({...s,root:r,ring,used:false,petitionIndex:0,home:r.position.clone(),wanderTarget:r.position.clone(),wanderTimer:1+Math.random()*3,routeIndex:0,routePause:0})}
 let guardTemplatePromise=null;
 async function getGuardTemplate(){if(!guardTemplatePromise)guardTemplatePromise=load('./assets/guard.glb');return guardTemplatePromise}
-async function makeSoldier(name,pos,collection,tint=0xffffff){
-  const src=await getGuardTemplate(),r=new THREE.Group();r.position.fromArray(pos);scene.add(r);
-  const visual=cloneSkeleton(src.scene);prep(visual,true);visual.traverse(o=>{if(o.isMesh&&o.material&&tint!==0xffffff)o.material.color?.multiply(new THREE.Color(tint))});r.add(visual);
-  const ring=new THREE.Mesh(new THREE.RingGeometry(.4,.48,24),new THREE.MeshBasicMaterial({color:collection===guardUnits?0x86a9ff:0xd4c074,transparent:true,opacity:.07,side:THREE.DoubleSide}));
-  ring.rotation.x=-Math.PI/2;ring.position.y=.02;r.add(ring);const u={name,root:r,patrolIndex:0,ring,hp:100,attackCooldown:0,alive:true};collection.push(u);return u
-}
-async function loadRoyalGuard(name,pos){return makeSoldier(name,pos,guardUnits)}
-async function loadArmySoldier(name,pos){return makeSoldier(name,pos,armyUnits,0xe1d6bd)}
-const patrolPoints=[new THREE.Vector3(-5,0,3),new THREE.Vector3(-7,0,-4),new THREE.Vector3(-14,0,-6),new THREE.Vector3(-18,0,3),new THREE.Vector3(-8,0,8),new THREE.Vector3(0,0,4),new THREE.Vector3(8,0,8),new THREE.Vector3(17,0,4),new THREE.Vector3(18,0,-5),new THREE.Vector3(7,0,-5)];
-const thronePosts=[[-1.25,5.05],[1.25,5.05],[-2.4,4.05],[2.4,4.05],[-3.25,2.8],[3.25,2.8]];
-const gatePosts=[[16,-4],[18,-4],[20,-4],[16,-1.8],[18,-1.8],[20,-1.8]];
-const escortOffsets=[[-.9,-1.05],[.9,-1.05],[-1.45,-2],[1.45,-2],[-.75,-2.9],[.75,-2.9]];
+const activeGuardShift=()=>Math.floor((((S.clock%24)+24)%24)/8);
+const onDutyGuards=()=>actors.filter(a=>a.alive&&a.role==='royalguard'&&a.shift===activeGuardShift());
 function refreshCommandStatus(){
   const g=document.getElementById('guardStatus');if(!g)return;
-  const gn={patrol:'PATROL',escort:'ESCORT',throne:'THRONE',gate:'MAIN GATE'}[guardMode]||guardMode.toUpperCase();
-  const an={drill:'DRILLING',muster:'MUSTERED',gate:'DEFEND GATE',follow:'FOLLOW KING'}[armyMode]||armyMode.toUpperCase();
-  g.textContent='ROYAL GUARD · '+gn+'   |   ARMY '+armyUnits.length+' · '+an
+  const gn={patrol:'PATROL',escort:'2-KING ESCORT',throne:'THRONE POSTS',gate:'MAIN GATE',routine:'ROUTINE'}[guardMode]||String(guardMode).toUpperCase();
+  const an={drill:'DRILLING',routine:'ROUTINE',muster:'MUSTERED',gate:'DEFEND GATE',follow:'FOLLOW KING',campaign:'MARCH ON BLACKMERE'}[armyMode]||String(armyMode).toUpperCase();
+  g.textContent='ROYAL GUARD '+onDutyGuards().length+'/18 · '+gn+'   |   ARMY '+(S.army.size||0)+' · '+an
 }
-function setGuardMode(mode){guardMode=mode;realm.guardMode=mode;save();refreshCommandStatus();toast('ROYAL GUARD — '+mode.toUpperCase())}
-function setArmyMode(mode){armyMode=mode;realm.armyMode=mode;save();refreshCommandStatus();toast('ARMY — '+mode.toUpperCase())}
-function openGuardOrders(){dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent='Royal Command';speakerName.textContent='War Council';dialogueText.textContent='Your Majesty, your household guard and field soldiers await orders.';choicesEl.innerHTML='';appendGuardCommands()}
+function setGuardMode(mode){
+  guardMode=mode;realm.guardMode=mode;S.guard.mode=mode;S.guard.until=mode==='routine'?0:S.clock+4;
+  const duty=onDutyGuards();for(const a of actors.filter(x=>x.role==='royalguard'))cancelOrder(a);
+  if(mode==='escort')duty.slice(0,2).forEach((a,i)=>issueOrder(a,{type:'follow',off:[i?1:-1,-2.2],hours:4,label:'Escorting the King'}));
+  else if(mode==='patrol')duty.forEach((a,i)=>issueOrder(a,{type:'patrol',route:ROUTES.castle.map((p,k)=>[(p[0]||0)+(i%3-1)*.55,(p[1]||0)+((i+k)%2?-.45:.45)]),pause:5,hours:4,label:'Patrolling the castle'}));
+  else if(mode==='throne')duty.forEach((a,i)=>issueOrder(a,{type:'post',place:'plaza',spot:'guard',i,hours:4,label:'Guarding the Royal Throne'}));
+  else if(mode==='gate')duty.forEach((a,i)=>issueOrder(a,{type:'post',place:'gate',spot:'guard',i,hours:4,label:'Holding the main gate'}));
+  save();refreshCommandStatus();toast('ROYAL GUARD — '+mode.toUpperCase())
+}
+function setArmyMode(mode){
+  armyMode=mode;realm.armyMode=mode;S.army.directive=mode;S.army.until=mode==='routine'?0:S.clock+4;
+  const troops=actors.filter(a=>a.alive&&['soldier','sergeant','captain'].includes(a.role));for(const a of troops)cancelOrder(a);
+  if(mode==='follow')troops.slice(0,12).forEach((a,i)=>issueOrder(a,{type:'follow',off:[(i%4-1.5)*1.25,-4-Math.floor(i/4)*1.5],hours:4,label:'Marching with the King'}));
+  else if(mode==='campaign'){
+    S.army.until=S.clock+8;S.war.campaign={target:'valemar',state:'marching',started:S.clock};
+    troops.slice(0,22).forEach((a,i)=>issueOrder(a,{type:'post',place:'bmYard',spot:'drill',i,hours:8,label:'Marching on Blackmere'}))
+  }
+  save();refreshCommandStatus();toast('ARMY — '+mode.toUpperCase())
+}
+function openGuardOrders(){dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent='Royal Command';speakerName.textContent='War Council';dialogueText.textContent='Your Majesty, the household guard, field army, realm policy, and foreign affairs are under your authority.';choicesEl.innerHTML='';appendCouncilReport();appendGuardCommands();appendRealmPolicyCommands();appendDiplomacyCommands()}
 function appendGuardCommands(){
   const hr=document.createElement('div');hr.className='command-title';hr.textContent='ROYAL GUARD';choicesEl.appendChild(hr);
-  for(const [mode,title,note] of [['escort','Escort the King','All six Royal Guards form around you.'],['patrol','Patrol the castle','The guard circulates through all castle districts.'],['throne','Guard the throne','Six guards take ceremonial throne-room posts.'],['gate','Hold the main gate','Deploy the Royal Guard at the outer gate.']]){
+  for(const [mode,title,note] of [['routine','Resume normal shifts','Cancel special orders; guards return to work/rest rotation.'],['escort','Escort the King','Two guards escort you; the rest keep their normal posts.'],['patrol','Patrol the castle','The active shift circulates through castle districts.'],['throne','Guard the throne','The active shift takes ceremonial throne-room posts.'],['gate','Hold the main gate','Deploy the active Royal Guard shift at the outer gate.']]){
     const b=document.createElement('button');b.innerHTML='<b>'+title+'</b><small>'+note+'</small>';b.onclick=()=>{setGuardMode(mode);closeDialog()};choicesEl.appendChild(b)}
   const ar=document.createElement('div');ar.className='command-title';ar.textContent='FIELD ARMY';choicesEl.appendChild(ar);
-  for(const [mode,title,note] of [['drill','Train at the barracks','Soldiers return to formation drills.'],['muster','Muster in the royal court','Bring the field company before their king.'],['gate','Reinforce the main gate','March the army to defend the entrance.'],['follow','March with the King','The army column follows at a respectful distance.']]){
+  for(const [mode,title,note] of [['routine','Resume garrison routine','Officers and soldiers return to ordinary duty, meals, training and rest.'],['drill','Train at the barracks','Soldiers return to formation drills.'],['muster','Muster in the royal court','Bring the field company before their king.'],['gate','Reinforce the main gate','March the army to defend the entrance.'],['follow','March with the King','A twelve-soldier royal column follows at a respectful distance.']]){
     const b=document.createElement('button');b.innerHTML='<b>'+title+'</b><small>'+note+'</small>';b.onclick=()=>{setArmyMode(mode);closeDialog()};choicesEl.appendChild(b)}
+  if(S.powers.valemar.war){
+    const b=document.createElement('button');b.innerHTML='<b>March on Blackmere</b><small>Send the field army down the Royal Road to confront House Valemar.</small>';b.onclick=()=>{setArmyMode('campaign');closeDialog()};choicesEl.appendChild(b)
+  }
 }
-function updateNPCWander(dt){for(const n of npcs){if(dialogueOpen||seated)continue;if(n.route?.length){if(n.routePause>0){n.routePause-=dt;continue}const p=n.route[n.routeIndex%n.route.length],target=new THREE.Vector3(p[0],0,p[1]),d=n.root.position.distanceTo(target);if(d<.25){n.routeIndex=(n.routeIndex+1)%n.route.length;n.routePause=1.2+Math.random()*2.8;continue}const v=target.sub(n.root.position);v.y=0;v.normalize();n.root.position.addScaledVector(v,dt*(n.id==='captain'?.48:.36));n.root.rotation.y=Math.atan2(v.x,v.z)}else{n.wanderTimer-=dt;const d=n.root.position.distanceTo(n.wanderTarget);if(n.wanderTimer<=0||d<.12){n.wanderTimer=2.5+Math.random()*4;const a=Math.random()*Math.PI*2,r=.35+Math.random()*1.2;n.wanderTarget.set(n.home.x+Math.cos(a)*r,0,n.home.z+Math.sin(a)*r)}const v=n.wanderTarget.clone().sub(n.root.position);v.y=0;if(v.length()>.1){v.normalize();n.root.position.addScaledVector(v,dt*.3);n.root.rotation.y=Math.atan2(v.x,v.z)}}}}
+function appendCouncilReport(){
+  const h=((S.clock%24)+24)%24,hh=Math.floor(h),mm=Math.floor((h-hh)*60),d=diplomacySummary();
+  const box=document.createElement('div');box.className='command-report';
+  box.innerHTML='<b>COUNCIL REPORT</b><span>'+seasonName()+' · Day '+simDay()+' · '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+'</span>'+
+    '<span>Stores · Grain '+Math.round(S.stock.grain)+' · Wood '+Math.round(S.stock.wood)+' · Iron '+Math.round(S.stock.iron)+' · Arms '+Math.round(S.stock.arms)+'</span>'+
+    '<span>Royal Guard '+onDutyGuards().length+'/18 on duty · Army '+S.army.size+'</span>'+
+    '<span>Blackmere '+d.valemar.rel+' · Kestrel '+d.kestrel.rel+' · Stonehollow '+d.guild.rel+' · Ashwood '+d.ashwood.rel+'</span>';
+  choicesEl.appendChild(box)
+}
+function appendRealmPolicyCommands(){
+  const ds=document.createElement('div');ds.className='command-title';ds.textContent='ROYAL POLICY';choicesEl.appendChild(ds);
+  const options=[
+    ['Light taxes','Less revenue · +4 favor · +2 prosperity',()=>{S.realm.tax=.75;realm.favor+=4;realm.prosperity+=2;clampRealm();save();renderStats();closeDialog();toast('THE CROWN LIGHTENS TAXES')}],
+    ['Standard taxes','Restore balanced taxation',()=>{S.realm.tax=1;save();closeDialog();toast('STANDARD TAXATION RESTORED')}],
+    ['War levy','More revenue · -5 favor · +2 security',()=>{S.realm.tax=1.35;realm.favor-=5;realm.security+=2;clampRealm();save();renderStats();closeDialog();toast('A WAR LEVY IS PROCLAIMED')}],
+    ['Generous rations','Use more grain · +3 favor',()=>{S.realm.ration=1.15;realm.favor+=3;clampRealm();save();renderStats();closeDialog();toast('GENEROUS RATIONS ORDERED')}],
+    ['Conserve grain','Use less grain · -3 favor',()=>{S.realm.ration=.8;realm.favor-=3;clampRealm();save();renderStats();closeDialog();toast('THE GRANARY CONSERVES GRAIN')}],
+    ['Fund the farms','100 coin · stronger grain production',()=>{if(spend(100)){S.realm.farmFocus=1.2;realm.prosperity+=3;clampRealm();save();renderStats();toast('THE CROWN FUNDS FARM PRODUCTION')}closeDialog()}]
+  ];
+  for(const [t,n,fn] of options){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
+}
+function appendDiplomacyCommands(){
+  const ds=document.createElement('div');ds.className='command-title';ds.textContent='DIPLOMACY';choicesEl.appendChild(ds);
+  const d=diplomacySummary(),v=d.valemar,k=d.kestrel;
+  const options=[];
+  if(!S.powers.kestrel.treaties.trade)options.push(['Trade accord with House Kestrel','Relation '+k.rel+' · improves long-term stability',()=>{treaty('kestrel','trade',true);realm.prosperity+=4;save();renderStats();closeDialog();toast('TRADE ACCORD SIGNED WITH HOUSE KESTREL')}]);
+  options.push(['Send envoy and gift to Blackmere','80 coin · improve relations with House Valemar',()=>{if(spend(80)){relation('valemar',15,'A royal envoy carried gifts to Blackmere.');save();closeDialog();toast('ENVOY SENT TO BLACKMERE')} }]);
+  if(S.powers.valemar.war)options.push(['Offer peace to House Valemar','End the current war if accepted by the Crown',()=>{makePeace('valemar');save();closeDialog();toast('PEACE TERMS SENT TO BLACKMERE')}]);
+  else options.push(['Declare war on House Valemar','Mobilize the Crown against Blackmere Keep',()=>{declareWar('valemar');S.army.directive='muster';armyMode='muster';save();closeDialog();toast('THE CROWN IS AT WAR WITH HOUSE VALEMAR')}]);
+  for(const [t,n,fn] of options){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
+}
+function actorRole(a){return String(a.role||'subject').replaceAll(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}
+function roleWorkOrder(a){
+  const r=a.role;
+  if(['farmer'].includes(r))return {title:'Work the fields',note:'Return to farm labor by royal order.',ord:{type:'work',place:a.work||'f1',spot:'hoe',pose:'hoe',prod:'grain',cycle:38,hours:3,label:'Working the fields by royal order'}};
+  if(r==='mbfarmer')return {title:'Work the Millbrook plots',note:'Direct three hours of farm labor.',ord:{type:'work',place:'mbfield',spot:'hoe',pose:'hoe',prod:'grain',cycle:38,hours:3,label:'Working Millbrook fields by royal order'}};
+  if(r==='woodcutter')return {title:'Cut timber for the Crown',note:'Send timber production to the royal economy.',ord:{type:'work',place:'lumber',spot:'chop',pose:'chop',prod:'wood',cycle:40,hours:3,label:'Cutting royal timber'}};
+  if(['smith','apprentice'].includes(r))return {title:'Forge arms for the garrison',note:'Increase weapons production.',ord:{type:'work',place:'smithy',spot:'anvil',pose:'hammer',prod:'arms',cycle:42,hours:3,label:'Forging arms by royal order'}};
+  if(r==='miner')return {title:'Mine iron for the Crown',note:'Increase iron production.',ord:{type:'work',place:'mine',spot:'dig',pose:'chop',prod:'ore',cycle:42,hours:3,label:'Mining iron by royal order'}};
+  if(r==='merchant')return {title:'Trade in the royal market',note:'Increase taxable trade activity.',ord:{type:'work',place:'market',spot:'stall',pose:'trade',prod:'trade',cycle:38,hours:3,label:'Trading by royal order'}};
+  if(['cook','kitchenhand'].includes(r))return {title:'Prepare a royal meal',note:'Return to the kitchens and feed the household.',ord:{type:'work',place:'kitchens',spot:'cook',pose:'cook',prod:'meals',cycle:38,hours:3,label:'Preparing royal meals'}};
+  if(['servant','maid'].includes(r))return {title:'Attend the Great Hall',note:'Serve the royal household.',ord:{type:'work',place:'greatHall',spot:'stand',pose:'carry',cycle:35,hours:2,label:'Attending the Great Hall by royal order'}};
+  if(r==='stablehand')return {title:'Tend the royal horses',note:'Return to stable duty.',ord:{type:'work',place:'stable',spot:'tend',pose:'tend',cycle:38,hours:3,label:'Tending the royal horses'}};
+  if(['treasurer','scribe'].includes(r))return {title:'Prepare a report for the Crown',note:'Work from the treasury ledgers.',ord:{type:'work',place:'treasury',spot:'desk',pose:'write',cycle:45,hours:2,label:'Preparing a royal report'}};
+  if(r==='priest')return {title:'Hold service in the chapel',note:'Return to the chapel altar.',ord:{type:'work',place:'chapel',spot:'altar',pose:'pray',cycle:48,hours:2,label:'Holding chapel service'}};
+  return null
+}
+function openActorAudience(a){
+  dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent=actorRole(a);speakerName.textContent=a.name;choicesEl.innerHTML='';
+  if(a.petitionKey){audience(a);return}
+  if(a.hero==='rival'){
+    const p=S.powers.valemar;dialogueText.textContent='Lord Maren watches you carefully. Relations: '+Math.round(p.rel)+'. '+(p.war?'Your realms are at war.':'Blackmere remains an independent rival power.');
+    const opts=p.war?
+      [['Offer peace','Attempt to end the war',()=>{makePeace('valemar');save();closeDialog()}]]:
+      [['Demand improved relations','Royal pressure · relation may worsen',()=>{relation('valemar',-5,'The Crown issued a hard demand to Blackmere.');save();closeDialog()}],['Offer a pact','Improve relations by diplomacy',()=>{relation('valemar',10,'The King offered Blackmere a limited pact.');save();closeDialog()}]];
+    for(const [t,n,fn] of opts){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}return
+  }
+  dialogueText.textContent=(a.order?'Royal order active: '+(a.order.label||a.order.type)+'. ':'')+'Current activity: '+activityOf(a)+'.';
+  const opts=[
+    ['Report to the Royal Court','Come before the King for a short audience',()=>{issueOrder(a,{type:'goto',place:'plaza',spot:'petition',dur:18,label:'Reporting to the King'});save();closeDialog();toast(a.name.toUpperCase()+' — REPORT TO COURT')}],
+    ['Follow the King','Follow personally for two game hours',()=>{issueOrder(a,{type:'follow',off:[0,-2.3],hours:2,label:'Following the King'});save();closeDialog();toast(a.name.toUpperCase()+' — FOLLOW')}],
+    ['Wait here','Hold this place for one game hour',()=>{issueOrder(a,{type:'post',pos:{x:player.position.x,z:player.position.z},hours:1,label:'Waiting where the King commanded'});save();closeDialog();toast(a.name.toUpperCase()+' — HOLD POSITION')}],
+    ['Resume normal duties','Cancel direct royal order and return to ordinary life',()=>{cancelOrder(a);save();closeDialog();toast(a.name.toUpperCase()+' — RESUME DUTIES')}]
+  ];
+  const rw=roleWorkOrder(a);if(rw)opts.splice(1,0,[rw.title,rw.note,()=>{issueOrder(a,rw.ord);save();closeDialog();toast(a.name.toUpperCase()+' — '+rw.title.toUpperCase())}]);
+  if(['royalguard','soldier','sergeant','captain'].includes(a.role))opts.splice(1,0,['Hold the main gate','Take a temporary defensive post',()=>{issueOrder(a,{type:'post',place:'gate',spot:'guard',hours:3,label:'Holding the main gate by royal order'});save();closeDialog();toast(a.name.toUpperCase()+' — GATE POST')}]);
+  for(const [t,n,fn] of opts){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
+}
 function moveUnit(u,target,dt,speed){const v=target.clone().sub(u.root.position);v.y=0;if(v.length()>.08){v.normalize();u.root.position.addScaledVector(v,dt*speed);u.root.rotation.y=Math.atan2(v.x,v.z)}}
-function updateGuards(dt){
-  guardUnits.forEach((g,i)=>{let target;
-    if(guardMode==='escort'){const [sx,sz]=escortOffsets[i%escortOffsets.length],f=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y)),r=new THREE.Vector3(f.z,0,-f.x);target=player.position.clone().addScaledVector(r,sx).addScaledVector(f,sz)}
-    else if(guardMode==='throne'){const p=thronePosts[i%thronePosts.length];target=new THREE.Vector3(p[0],0,p[1])}
-    else if(guardMode==='gate'){const p=gatePosts[i%gatePosts.length];target=new THREE.Vector3(p[0],0,p[1])}
-    else{target=patrolPoints[(g.patrolIndex+i*2)%patrolPoints.length];if(g.root.position.distanceTo(target)<.35)g.patrolIndex=(g.patrolIndex+1)%patrolPoints.length}
-    moveUnit(g,target,dt,guardMode==='escort'?1.75:.95);g.ring.material.opacity=guardMode==='escort'?.18:.06
-  })
-}
-function updateArmy(dt){
-  armyUnits.forEach((u,i)=>{const row=Math.floor(i/4),col=i%4;let target;
-    if(armyMode==='gate')target=new THREE.Vector3(14+col*1.7,0,-6+row*1.5);
-    else if(armyMode==='muster')target=new THREE.Vector3(-3+col*1.8,0,-2.7-row*1.5);
-    else if(armyMode==='follow'){const f=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y)),r=new THREE.Vector3(f.z,0,-f.x);target=player.position.clone().addScaledVector(f,-4.2-row*1.4).addScaledVector(r,(col-1.5)*1.2)}
-    else target=new THREE.Vector3(-18+col*1.7,0,2-row*1.6);
-    moveUnit(u,target,dt,armyMode==='follow'?1.45:.72)
-  })
-}
-
 async function spawnRaider(name,pos){
  const src=await getGuardTemplate(),root=new THREE.Group();root.position.fromArray(pos);scene.add(root);
  const visual=cloneSkeleton(src.scene);prep(visual,true);visual.traverse(o=>{if(o.isMesh&&o.material){o.material.color?.multiply(new THREE.Color(0x7a3d3d));o.material.roughness=.78}});root.add(visual);
@@ -194,92 +281,122 @@ async function spawnRaider(name,pos){
 async function spawnRaid(count=6){
  if(raidActive)return;raidActive=true;raidPending=count;raidWave++;warStatusEl.classList.remove('hidden');warStatusEl.textContent='RAID WAVE '+raidWave+' · ENEMIES AT THE GATE';initAudio();alarmHorn();toast('ALARM — RAIDERS AT THE MAIN GATE');
  setGuardMode('gate');setArmyMode('gate');
- for(let i=0;i<count;i++){setTimeout(()=>spawnRaider('Raider '+(i+1),[13.5+(i%4)*2.1,0,-12.1-Math.floor(i/4)*1.2]).catch(console.error),i*100)}
+ for(let i=0;i<count;i++){setTimeout(()=>spawnRaider('Raider '+(i+1),[57+Math.floor(i/3)*1.8,0,-5+(i%3)*5]).catch(console.error),i*100)}
 }
 function aliveRaiders(){return raiders.filter(r=>r.alive)}
-function nearestUnit(from,arr){let best=null,bd=Infinity;for(const u of arr){if(!u.alive)continue;const d=from.root.position.distanceTo(u.root.position);if(d<bd){bd=d;best=u}}return [best,bd]}
-function defeatUnit(u){u.alive=false;u.root.visible=false}
+function nearestDefender(pos,arr){let best=null,bd=Infinity;for(const a of arr){if(!a.alive)continue;const d=Math.hypot(pos.x-a.x,pos.z-a.z);if(d<bd){bd=d;best=a}}return[best,bd]}
+function nearestRaiderToActor(a){let best=null,bd=Infinity;for(const r of aliveRaiders()){const d=Math.hypot(r.root.position.x-a.x,r.root.position.z-a.z);if(d<bd){bd=d;best=r}}return[best,bd]}
+function defeatUnit(u){u.alive=false;if(u.root)u.root.visible=false;u.fight=null}
 function finishRaid(win){
- raidActive=false;warStatusEl.classList.add('hidden');
- if(win){realm.security+=6;realm.favor+=4;toast('RAID DEFEATED — THE CASTLE HOLDS')}else{realm.security-=15;realm.gold=Math.max(0,realm.gold-120);toast('THE RAIDERS BREACHED THE DEFENSES')}
+ raidActive=false;warStatusEl.classList.add('hidden');for(const a of actors)a.fight=null;
+ if(win){realm.security+=6;realm.favor+=4;S.stats.raidsHeld=(S.stats.raidsHeld||0)+1;toast('RAID DEFEATED — THE CASTLE HOLDS')}else{realm.security-=15;realm.gold=Math.max(0,realm.gold-120);toast('THE RAIDERS BREACHED THE DEFENSES')}
  clampRealm();save();renderStats()
 }
-function healForces(){for(const u of [...guardUnits,...armyUnits]){u.hp=100;u.alive=true;u.root.visible=true}}
+function healForces(){for(const a of actors.filter(x=>['royalguard','soldier','sergeant','captain','marshal'].includes(x.role))){a.hp=a.maxhp;a.alive=true;a.fight=null}}
 function updateRaid(dt){
  if(!raidActive)return;
- const enemies=aliveRaiders(),defenders=[...guardUnits,...armyUnits].filter(u=>u.alive);warStatusEl.textContent='RAID WAVE '+raidWave+' · '+(enemies.length+raidPending)+' ENEMIES';
+ const enemies=aliveRaiders(),defenders=actors.filter(a=>a.alive&&a.team==='crown'&&['royalguard','soldier','sergeant','captain','marshal'].includes(a.role));
+ warStatusEl.textContent='RAID WAVE '+raidWave+' · '+(enemies.length+raidPending)+' ENEMIES';
  if(enemies.length===0){if(raidPending===0)finishRaid(true);return}
  if(defenders.length===0){finishRaid(false);return}
  for(const r of enemies){
-   const [t,d]=nearestUnit(r,defenders);if(!t)continue;
-   if(d>1.15)moveUnit(r,t.root.position,dt,.72);
-   else{r.attackCooldown-=dt;if(r.attackCooldown<=0){r.attackCooldown=.95;t.hp-=14;if(t.hp<=0)defeatUnit(t)}}
+   const [t,d]=nearestDefender(r.root.position,defenders);if(!t)continue;
+   if(d>1.2){const target=new THREE.Vector3(t.x,0,t.z);moveUnit(r,target,dt,.82)}
+   else{r.attackCooldown-=dt;if(r.attackCooldown<=0){r.attackCooldown=.95;t.hp-=14;t.fight={label:'Fighting raiders'};if(t.hp<=0)defeatUnit(t)}}
  }
- for(const d of defenders){
-   const [t,dist]=nearestUnit(d,enemies);if(!t)continue;
-   if(dist<4.5&&dist>1.08)moveUnit(d,t.root.position,dt,1.05);
-   d.attackCooldown-=dt;if(dist<=1.18&&d.attackCooldown<=0){d.attackCooldown=.72;t.hp-=22;t.ring.material.opacity=.75;if(t.hp<=0)defeatUnit(t)}
+ for(const a of defenders){
+   const [t,d]=nearestRaiderToActor(a);if(!t)continue;
+   a.cool=Math.max(0,(a.cool||0)-dt);
+   if(d<10){a.fight={label:'Defending the Crownlands'};
+     if(d>1.1){const dx=t.root.position.x-a.x,dz=t.root.position.z-a.z,L=Math.hypot(dx,dz)||1,nx=a.x+dx/L*dt*1.05,nz=a.z+dz/L*dt*1.05;if(!realmBlockedAt(nx,nz,.28)){a.x=nx;a.z=nz;a.yaw=Math.atan2(dx,dz)}}
+     else if(a.cool<=0){a.cool=.72;t.hp-=22;t.ring.material.opacity=.8;if(t.hp<=0)defeatUnit(t)}
+   }else if(a.fight)a.fight=null
  }
+}
+function warCombatants(team){
+  if(team==='crown')return actors.filter(a=>a.alive&&a.team==='crown'&&['soldier','sergeant','captain','marshal'].includes(a.role));
+  return actors.filter(a=>a.alive&&a.team==='valemar'&&['vguard','vsoldier'].includes(a.role))
+}
+function nearestActorEnemy(a,list){let best=null,bd=Infinity;for(const b of list){if(!b.alive)continue;const d=Math.hypot(a.x-b.x,a.z-b.z);if(d<bd){bd=d;best=b}}return[best,bd]}
+function moveActorToward(a,b,dt,speed=1.05){
+  const dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz)||1,nx=a.x+dx/L*dt*speed,nz=a.z+dz/L*dt*speed;
+  if(!realmBlockedAt(nx,nz,.28,false,false)){a.x=nx;a.z=nz;a.yaw=Math.atan2(dx,dz)}
+}
+function updateWarfront(dt){
+  if(!S.powers.valemar.war)return;
+  const crown=warCombatants('crown'),enemy=warCombatants('valemar');
+  const engagedCrown=crown.filter(a=>a.x>350),engagedEnemy=enemy.filter(a=>a.x>375);
+  if(S.army.directive==='campaign' || engagedCrown.length){
+    if(!raidActive){warStatusEl.classList.remove('hidden');warStatusEl.textContent='WAR FOR BLACKMERE · CROWN '+engagedCrown.filter(a=>a.alive).length+' · VALEMAR '+engagedEnemy.filter(a=>a.alive).length}
+    for(const a of engagedCrown){
+      const [e,d]=nearestActorEnemy(a,engagedEnemy);if(!e)continue;a.cool=Math.max(0,(a.cool||0)-dt);
+      if(d<9){a.fight={label:'Fighting House Valemar'};if(d>1.15)moveActorToward(a,e,dt,1.12);else if(a.cool<=0){a.cool=.75;e.hp-=20;if(e.hp<=0){e.alive=false;e.fight=null}}}
+    }
+    for(const a of engagedEnemy){
+      const [e,d]=nearestActorEnemy(a,engagedCrown);if(!e)continue;a.cool=Math.max(0,(a.cool||0)-dt);
+      if(d<9){a.fight={label:'Defending Blackmere'};if(d>1.15)moveActorToward(a,e,dt,1.02);else if(a.cool<=0){a.cool=.82;e.hp-=18;if(e.hp<=0){e.alive=false;e.fight=null}}}
+    }
+    const livingEnemy=enemy.filter(a=>a.alive);
+    if(enemy.length&&livingEnemy.length===0){
+      S.war.state='victory';S.war.campaign={target:'valemar',state:'won',ended:S.clock};S.war.victories=(S.war.victories||0)+1;
+      S.powers.valemar.war=false;S.powers.valemar.rel=-100;S.powers.valemar.army=0;realm.favor+=10;realm.security+=8;S.realm.renown=Math.min(100,S.realm.renown+12);
+      setArmyMode('routine');clampRealm();save();renderStats();warStatusEl.classList.add('hidden');toast('BLACKMERE HAS FALLEN — CROWNLANDS VICTORIOUS')
+    }else if(crown.length&&crown.filter(a=>a.alive).length===0){
+      S.war.state='defeat';S.war.defeats=(S.war.defeats||0)+1;realm.security-=18;realm.favor-=8;S.army.directive='routine';armyMode='routine';clampRealm();save();renderStats();toast('THE CROWN ARMY HAS BEEN DEFEATED')
+    }
+  }else if(!raidActive)warStatusEl.classList.add('hidden')
 }
 function kingAttack(){
- if(!raidActive||seated)return;let best=null,bd=2.35;for(const r of aliveRaiders()){const d=player.position.distanceTo(r.root.position);if(d<bd){best=r;bd=d}}
- if(!best){toast('NO ENEMY IN SWORD RANGE');return}
+ if(seated)return;
+ let raidTarget=null,bd=2.35;
+ for(const r of aliveRaiders()){const d=player.position.distanceTo(r.root.position);if(d<bd){raidTarget=r;bd=d}}
+ let actorTarget=null;
+ if(!raidTarget&&S.powers.valemar.war){
+   for(const a of actors){if(!a.alive||a.team!=='valemar')continue;const d=Math.hypot(player.position.x-a.x,player.position.z-a.z);if(d<bd){actorTarget=a;bd=d}}
+ }
+ if(!raidTarget&&!actorTarget){toast('NO ENEMY IN SWORD RANGE');return}
  if(kingAttackAction&&playerMixer){const prev=kingAnimState==='walk'?kingWalkAction:kingIdleAction;kingAttackAction.reset().play();if(prev)kingAttackAction.crossFadeFrom(prev,.08,true);kingAnimState='attack';setTimeout(()=>{kingAnimState='';setKingAnimation(moving?'walk':'idle')},650)}
- swordSound();best.hp-=38;best.ring.material.opacity=1;toast('THE KING STRIKES');if(best.hp<=0)defeatUnit(best)
-}
-function buildCastleExpansion(){
-  const stone=new THREE.MeshStandardMaterial({color:0x8f887c,roughness:.9}),stone2=new THREE.MeshStandardMaterial({color:0x69645c,roughness:.88}),wood=new THREE.MeshStandardMaterial({color:0x654126,roughness:.82}),roof=new THREE.MeshStandardMaterial({color:0x6e1e29,roughness:.78}),grass=new THREE.MeshStandardMaterial({color:0x526b3d,roughness:1}),sand=new THREE.MeshStandardMaterial({color:0xb9a784,roughness:1}),gold=new THREE.MeshStandardMaterial({color:0xb88d35,metalness:.55,roughness:.35});
-  const box=(sx,sy,sz,mat,x,y,z,ry=0)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat);m.position.set(x,y,z);m.rotation.y=ry;m.receiveShadow=true;m.castShadow=sy>.3;world.add(m);return m};
-  box(76,.08,34,grass,7,-.12,0);box(44,.1,4,sand,0,-.04,0);box(5,.1,26,sand,0,-.03,0);box(22,.1,3.2,sand,28,-.035,-8.3);
-  // perimeter and gate
-  box(48,2.6,.65,stone2,0,1.25,-14);box(48,2.6,.65,stone2,0,1.25,14);box(.65,2.6,28,stone2,-24,1.25,0);box(.65,2.6,28,stone2,24,1.25,0);
-  for(const x of [-21,-17,17,21]){const t=new THREE.Mesh(new THREE.CylinderGeometry(1.45,1.7,5.2,12),stone);t.position.set(x,2.55,-11.8);t.castShadow=t.receiveShadow=true;world.add(t);const cap=new THREE.Mesh(new THREE.ConeGeometry(1.85,1.7,12),roof);cap.position.set(x,5.95,-11.8);world.add(cap)}
-  box(7,4,.7,stone,19,2,-11.8);box(2.8,4.5,.8,wood,19,2,-11.3);
-  // barracks
-  box(9,.18,9,stone,-16,-.02,1.5);box(8,3.3,5.5,wood,-17,1.65,-4);box(8,.45,6.1,roof,-17,3.55,-4);
-  box(4,2.8,3.2,wood,-11.5,1.4,-4.5);box(4,.4,3.8,roof,-11.5,3,-4.5);
-  for(const z of [2,5,8]){const pole=box(.16,1.8,.16,wood,-13,.9,z);const cross=box(1.2,.14,.14,wood,-13,1.65,z);const head=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),sand);head.position.set(-13,1.85,z);world.add(head)}
-  // market / civilian yard
-  box(9,.18,9,stone,15,-.02,4);for(const [x,z] of [[12,5],[16,7],[19,4]]){box(3,.16,1.8,wood,x,.85,z);for(const dx of [-1.25,1.25])box(.12,1.7,.12,wood,x+dx,.8,z);box(3.3,.12,2.1,roof,x,1.75,z)}
-  // lower village and farms outside the east wall
-  for(const [x,z] of [[28,-3],[32,2],[28,7]]){box(5,2.8,4.2,wood,x,1.4,z);box(5.5,.42,4.8,roof,x,3.02,z)}
-  // farm plots and fences
-  for(const z of [-1,3.2,7.4]){box(6,.08,2.4,new THREE.MeshStandardMaterial({color:0x735836,roughness:1}),34,-.03,z);for(let k=-2;k<=2;k++)box(.07,.16,2.1,new THREE.MeshStandardMaterial({color:0x8d7147,roughness:1}),34+k*.95,.05,z)}
-  // village well
-  const wellBase=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.12,.75,16),stone);wellBase.position.set(31,.36,-7);wellBase.castShadow=wellBase.receiveShadow=true;world.add(wellBase);
-  const wellLip=new THREE.Mesh(new THREE.TorusGeometry(1.03,.14,8,20),stone2);wellLip.rotation.x=Math.PI/2;wellLip.position.set(31,.82,-7);world.add(wellLip);
-  for(const x of [30.15,31.85])box(.12,2,.12,wood,x,1.75,-7);box(2.1,.12,.12,wood,31,2.68,-7);
-  // farm fencing
-  for(const x of [30.8,37.2])box(.12,1.05,11,wood,x,.45,3.2);for(const z of [-2.1,8.5])box(6.4,1.05,.12,wood,34,.45,z);
-  // banners mark districts
-  for(const [x,z] of [[-7,0],[7,0]]){const pole=box(.12,3,.12,wood,x,1.5,-1);const flag=box(1.15,1.45,.06,roof,x+(x<0?-.62:.62),2.15,-1)}
-  const labels=[['BARRACKS & TRAINING YARD',-16,3.4,10],['ROYAL COURT',0,3.6,8],['MAIN GATE & MARKET',16,3.4,10],['LOWER VILLAGE & FARMS',31,3.4,10]];
-  for(const [txt,x,y,z] of labels){const l=label(txt);l.scale.set(3.3,.65,1);l.position.set(x,y,z);world.add(l)}
+ swordSound();
+ if(raidTarget){raidTarget.hp-=38;raidTarget.ring.material.opacity=1;if(raidTarget.hp<=0)defeatUnit(raidTarget)}
+ else{actorTarget.hp-=38;actorTarget.fight={label:'Fighting the King'};if(actorTarget.hp<=0){actorTarget.alive=false;actorTarget.fight=null;S.stats.kills=(S.stats.kills||0)+1}}
+ toast('THE KING STRIKES')
 }
 async function addCastleAsset(path,pos,scale=1,rot=0){
   try{const g=await load(path);prep(g.scene,true);g.scene.position.set(pos[0],pos[1],pos[2]);g.scene.scale.setScalar(scale);g.scene.rotation.y=rot;world.add(g.scene);return g.scene}catch(e){console.warn('castle asset',path,e);return null}
 }
 async function loadCastleDetailAssets(){
   const jobs=[
-    addCastleAsset('./assets/castle/gate.glb',[19,1.8,-11.1],2.4,0),
-    addCastleAsset('./assets/castle/tower-square.glb',[15.6,2.3,-11.2],2.7,0),
-    addCastleAsset('./assets/castle/tower-square.glb',[22.1,2.3,-11.2],2.7,0),
-    addCastleAsset('./assets/castle/flag-wide.glb',[18.9,4.6,-10.6],1.4,0),
-    addCastleAsset('./assets/castle/siege-catapult.glb',[-20,.9,6.3],1.15,-Math.PI*.35),
-    addCastleAsset('./assets/castle/siege-ballista.glb',[-15.5,.8,6.5],1.15,Math.PI*.18),
-    addCastleAsset('./assets/castle/bridge-draw.glb',[19,.3,-8.8],2.0,0),
-    addCastleAsset('./assets/castle/wall-corner.glb',[-22,1.7,-11],2.0,0),
-    addCastleAsset('./assets/castle/tree-large.glb',[26,.8,-8],1.7,0),
-    addCastleAsset('./assets/castle/tree-large.glb',[36,.8,-7],1.8,.5),
-    addCastleAsset('./assets/castle/tree-small.glb',[27,.55,10],1.5,-.4),
-    addCastleAsset('./assets/castle/tree-small.glb',[36,.55,10],1.4,.8),
-    addCastleAsset('./assets/castle/rocks-large.glb',[38,.25,-3],1.2,.2),
-    addCastleAsset('./assets/castle/rocks-small.glb',[25,.2,5],1.0,-.3)
+    addCastleAsset('./assets/castle/gate.glb',[46,1.7,0],2.5,Math.PI/2),
+    addCastleAsset('./assets/castle/tower-square.glb',[43,2.2,-7],2.4,0),
+    addCastleAsset('./assets/castle/tower-square.glb',[43,2.2,7],2.4,0),
+    addCastleAsset('./assets/castle/flag-wide.glb',[44,5.2,0],1.35,Math.PI/2),
+    addCastleAsset('./assets/castle/siege-catapult.glb',[-35,.8,10],1.15,-Math.PI*.25),
+    addCastleAsset('./assets/castle/siege-ballista.glb',[-29,.7,15],1.15,Math.PI*.18),
+    addCastleAsset('./assets/castle/bridge-draw.glb',[236,.18,62],1.8,Math.PI/2),
+    addCastleAsset('./assets/castle/wall-corner.glb',[-44,1.6,-32],2.0,0),
+    addCastleAsset('./assets/castle/tree-large.glb',[58,.8,-18],1.7,0),
+    addCastleAsset('./assets/castle/tree-large.glb',[70,.8,15],1.8,.5),
+    addCastleAsset('./assets/castle/tree-small.glb',[54,.55,20],1.5,-.4),
+    addCastleAsset('./assets/castle/tree-small.glb',[112,.55,-14],1.4,.8),
+    addCastleAsset('./assets/castle/rocks-large.glb',[245,.25,-12],1.2,.2),
+    addCastleAsset('./assets/castle/rocks-small.glb',[286,.2,106],1.0,-.3),
+    ...STALLS.map((p,i)=>addCastleAsset(i%2?'./assets/town/stall-green.glb':'./assets/town/stall-red.glb',[p[0],0,p[1]],3.0,i%3?0:Math.PI)),
+    addCastleAsset('./assets/town/cart.glb',[38,0,-16],3.0,Math.PI*.42),
+    addCastleAsset('./assets/town/cart.glb',[106,0,2],3.0,-Math.PI*.35),
+    addCastleAsset('./assets/town/lantern.glb',[44,0,-4.8],1.6,0),
+    addCastleAsset('./assets/town/lantern.glb',[44,0,4.8],1.6,0),
+    addCastleAsset('./assets/town/fountain-round.glb',[80,0,4.4],1.15,0),
+    addCastleAsset('./assets/town/fountain-round.glb',[35,0,-6.5],1.2,0),
+    addCastleAsset('./assets/town/windmill.glb',[204,0,38],4.1,Math.PI*.4),
+    addCastleAsset('./assets/town/watermill.glb',[231,0,33],4.0,Math.PI/2),
+    addCastleAsset('./assets/town/tree-high.glb',[74,0,14],2.2,0),
+    addCastleAsset('./assets/town/tree-high.glb',[101,0,-17],2.4,.6),
+    addCastleAsset('./assets/town/tree-crooked.glb',[117,0,10],2.1,-.4)
   ];
   await Promise.all(jobs)
 }
 function updateZone(){
-  const x=player.position.x;let z=x<-8?'BARRACKS & TRAINING YARD':x>24?'LOWER VILLAGE & FARMS':x>8?'MAIN GATE & MARKET':'ROYAL COURT';
+  const z=zoneAt(player.position.x,player.position.z);
   if(z!==currentZone){currentZone=z;const el=document.getElementById('zoneName');if(el)el.textContent=z;toast('ENTERED — '+z)}
 }
 function makeWorldInteractable(id,name,labelText,pos,openFn){
@@ -291,10 +408,11 @@ function makeWorldInteractable(id,name,labelText,pos,openFn){
 function spend(cost){if(realm.gold<cost){toast('THE TREASURY CANNOT AFFORD THAT');return false}realm.gold-=cost;return true}
 async function recruitSoldiers(count=4){
   const cost=count*30;if(!spend(cost))return;
-  const start=realm.armySize||armyUnits.length;realm.armySize=Math.min(20,start+count);realm.security+=3;clampRealm();save();renderStats();
-  const toAdd=Math.max(0,realm.armySize-armyUnits.length);
-  for(let i=0;i<toAdd;i++){const n=armyUnits.length;await loadArmySoldier('Crown Soldier '+(n+1),[-20+(n%4)*1.7,0,2-Math.floor(n/4)*1.5])}
-  refreshCommandStatus();toast(count+' SOLDIERS JOINED THE CROWN')
+  const existing=actors.filter(a=>a.role==='soldier').length;
+  const addCount=Math.max(0,Math.min(count,32-existing));
+  for(let i=0;i<addCount;i++){const n=existing+i,a=makeActor({id:'recruit'+Date.now()+'-'+i,name:'Crown Soldier '+(n+1),role:'soldier',rank:1,home:n%2?'barracksA':'barracksB',company:n%2,look:{asset:'guard',tint:0xd6c6a6}});placeByPlan(a)}
+  realm.armySize=actors.filter(a=>a.alive&&['soldier','sergeant','captain','marshal'].includes(a.role)).length;
+  realm.security+=3;clampRealm();save();renderStats();refreshCommandStatus();toast(addCount+' SOLDIERS JOINED THE CROWN')
 }
 function openBarracks(){
  dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent='Castle District';speakerName.textContent='Royal Barracks';dialogueText.textContent='Your soldiers drill here. Recruit, train, or muster the company.';choicesEl.innerHTML='';
@@ -333,21 +451,42 @@ function openVillage(){
  for(const [t,n,fn] of options){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
 }
 function buildDistrictInteractions(){
- makeWorldInteractable('barracks','Royal Barracks','BARRACKS',[-16,8],openBarracks);
- makeWorldInteractable('market','Royal Market','MARKET',[15,9],openMarket);
- makeWorldInteractable('gateCommand','Main Gate','GATE COMMAND',[19,-7.2],openGateCommand);
- makeWorldInteractable('village','Lower Village','VILLAGE STEWARD',[31,-6],openVillage)
+ makeWorldInteractable('barracks','Royal Barracks','BARRACKS',[-26,10],openBarracks);
+ makeWorldInteractable('market','Royal Market','MARKET',[35,-2],openMarket);
+ makeWorldInteractable('gateCommand','Main Gate','GATE COMMAND',[43,0],openGateCommand);
+ makeWorldInteractable('village','Lower Village','VILLAGE STEWARD',[88,0],openVillage)
 }
 function checkReady(){if(loadedEssential>=2&&!ready){ready=true;beginBtn.textContent='ENTER YOUR COURT'}}ready=true;beginBtn.disabled=false;beginBtn.textContent='ENTER YOUR COURT';
 
 function toast(t){toastEl.textContent=t;toastEl.classList.remove('hidden');clearTimeout(toast.t);toast.t=setTimeout(()=>toastEl.classList.add('hidden'),1800)}
-const petition=n=>petitions[n.id][n.petitionIndex%petitions[n.id].length];
-function apply(n,c){for(const[k,v]of Object.entries(c.delta))realm[k]=(realm[k]||0)+v;clampRealm();save();renderStats();n.used=true;closeDialog();toast('DECREE ISSUED — THE REALM HAS CHANGED');updateObjective()}
-function audience(n){dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent=n.role;speakerName.textContent=n.name;choicesEl.innerHTML='';if(n.used){dialogueText.textContent='“Your Majesty, your decree stands. I have no further petition for the Crown today.”';if(n.id==='captain')appendGuardCommands();return}const p=petition(n);dialogueText.textContent='“'+p.text+'”';for(const c of p.choices){const b=document.createElement('button'),cost=c.delta.gold<0?-c.delta.gold:0;if(cost>realm.gold){b.disabled=true;b.style.opacity='.45'}b.innerHTML='<b>'+c.title+'</b><small>'+c.note+(cost>realm.gold?' · Not enough coin':'')+'</small>';b.onclick=()=>apply(n,c);choicesEl.appendChild(b)}if(n.id==='captain')appendGuardCommands()}
+const petition=n=>{const key=n.petitionKey||n.id,list=petitions[key];return list?list[(n.petitionIndex||0)%list.length]:null};
+function apply(n,c){for(const[k,v]of Object.entries(c.delta))realm[k]=(realm[k]||0)+v;clampRealm();n.used=true;S.court.dayHeard=(S.court.dayHeard||0)+1;S.stats.petitions=(S.stats.petitions||0)+1;save();renderStats();closeDialog();toast('DECREE ISSUED — THE REALM HAS CHANGED');updateObjective()}
+function audience(n){
+  dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent=actorRole(n);speakerName.textContent=n.name;choicesEl.innerHTML='';
+  const p=petition(n);if(!p){openActorAudience(n);return}
+  if(n.used){dialogueText.textContent='“Your Majesty, your decree stands. I have no further petition for the Crown today.”';if(n.petitionKey==='captain'){appendGuardCommands();appendDiplomacyCommands()}return}
+  dialogueText.textContent='“'+p.text+'”';
+  for(const c of p.choices){const b=document.createElement('button'),cost=c.delta.gold<0?-c.delta.gold:0;if(cost>realm.gold){b.disabled=true;b.style.opacity='.45'}b.innerHTML='<b>'+c.title+'</b><small>'+c.note+(cost>realm.gold?' · Not enough coin':'')+'</small>';b.onclick=()=>apply(n,c);choicesEl.appendChild(b)}
+  if(n.petitionKey==='captain'){appendGuardCommands();appendDiplomacyCommands()}
+}
 function closeDialog(){dialogueOpen=false;dialogue.classList.add('hidden')}leaveDialogue.onclick=closeDialog;
-const done=()=>npcs.length>=4&&npcs.every(n=>n.used);
-function updateObjective(){objectiveEl.innerHTML=done()?'Court concluded. Return to your <b>THRONE</b> to begin the next day.':'Hold court. Walk to a subject and tap <b>AUDIENCE</b>.'}
-function nextDay(){realm.day++;healForces();const tax=Math.max(20,Math.round(35+realm.prosperity*.8));realm.gold+=tax;for(const n of npcs){n.used=false;n.petitionIndex=(n.petitionIndex+1)%petitions[n.id].length}clampRealm();save();renderStats();updateObjective();toast('DAY '+realm.day+' — CROWN REVENUE +'+tax+' COIN');if(realm.day%3===0)setTimeout(()=>spawnRaid(Math.min(10,4+realm.day)).catch(console.error),2200)}
+const courtActors=()=>actors.filter(a=>a.petitionKey);
+const done=()=>courtActors().length>=4&&courtActors().every(n=>n.used);
+function updateObjective(){objectiveEl.innerHTML=done()?'Court concluded. Return to your <b>THRONE</b>, explore the realm, or issue orders.':'Rule the realm. Hear petitions, inspect your people, explore, or open <b>ORDERS</b>.'}
+function resetCourtDay(){for(const n of courtActors()){n.used=false;n.petitionIndex=((n.petitionIndex||0)+1)%(petitions[n.petitionKey]?.length||1)}S.court.dayHeard=0}
+function nextDay(){
+  const target=(Math.floor(S.clock/24)+1)*24+8,deltaHours=Math.max(.1,target-S.clock);advanceTime(deltaHours*HOUR_SECONDS);
+  clampRealm();save();renderStats();updateObjective();toast('DAY '+simDay()+' — THE REALM AWAKENS')
+}
+simOn('day',({day})=>{
+  resetCourtDay();healForces();renderStats();updateObjective();save();
+  if(day%3===0)setTimeout(()=>spawnRaid(Math.min(10,4+day)).catch(console.error),2200)
+});
+simOn('hour',()=>{
+  if(S.guard.mode!=='routine'&&S.guard.until&&S.clock>=S.guard.until)setGuardMode('routine');
+  if(S.army.directive!=='routine'&&S.army.until&&S.clock>=S.army.until)setArmyMode('routine');
+  refreshCommandStatus()
+});
 function sitThrone(){
   seated=true;moveX=moveY=0;if(playerMixer){playerMixer.stopAllAction();playerMixer.timeScale=0}resetKingBones();
   const X=new THREE.Vector3(1,0,0),Z=new THREE.Vector3(0,0,1);
@@ -363,8 +502,9 @@ function standThrone(){
 function openThrone(){if(seated){standThrone();return}if(done()){dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent='Seat of the Crown';speakerName.textContent='Your Throne';choicesEl.innerHTML='';dialogueText.textContent='The day’s petitions are settled. Sit to close court, or begin the next day now.';const sit=document.createElement('button');sit.innerHTML='<b>Sit on the throne</b><small>Take your seat before the court.</small>';sit.onclick=()=>{closeDialog();sitThrone()};choicesEl.appendChild(sit);const b=document.createElement('button');b.innerHTML='<b>Begin the next day</b><small>Collect crown revenue and summon fresh petitions.</small>';b.onclick=()=>{closeDialog();nextDay()};choicesEl.appendChild(b)}else sitThrone()}
 ordersBtn.onclick=()=>{if(!dialogueOpen)openGuardOrders()};
 attackBtn.onclick=kingAttack;
-interactBtn.onclick=()=>{if(dialogueOpen)return;if(seated){standThrone();return}if(!currentTarget)return;if(currentTarget.isThrone)openThrone();else if(currentTarget.isWorldAction)currentTarget.openFn();else audience(currentTarget)};
+interactBtn.onclick=()=>{if(dialogueOpen)return;if(seated){standThrone();return}if(!currentTarget)return;if(currentTarget.isThrone)openThrone();else if(currentTarget.isWorldAction)currentTarget.openFn();else if(currentTarget.isLiving)openActorAudience(currentTarget.actor);else audience(currentTarget)};
 beginBtn.onclick=()=>{initAudio();royalChime();intro.classList.add('hidden');toast('LONG LIVE KING ALDRIC')};
+addEventListener('pagehide',save);addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 
 // movement joystick
 const joy=$('joystick'),stick=$('stick');let joyId=null;
@@ -377,16 +517,11 @@ let lookId=null,lx=0,ly=0;
 renderer.domElement.onpointerdown=e=>{if(dialogueOpen||e.clientX<innerWidth*.38)return;lookId=e.pointerId;lx=e.clientX;ly=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)};
 renderer.domElement.onpointermove=e=>{if(e.pointerId!==lookId)return;cameraYaw-=(e.clientX-lx)*.0065;cameraPitch=THREE.MathUtils.clamp(cameraPitch-(e.clientY-ly)*.0045,.05,.62);lx=e.clientX;ly=e.clientY};
 renderer.domElement.onpointerup=e=>{if(e.pointerId===lookId)lookId=null};renderer.domElement.onpointercancel=renderer.domElement.onpointerup;
-const keys=new Set();addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyE'&&currentTarget&&!dialogueOpen)(currentTarget.isThrone?openThrone():audience(currentTarget))});addEventListener('keyup',e=>keys.delete(e.code));
+const keys=new Set();addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyE'&&currentTarget&&!dialogueOpen)(currentTarget.isThrone?openThrone():currentTarget.isWorldAction?currentTarget.openFn():currentTarget.isLiving?openActorAudience(currentTarget.actor):audience(currentTarget))});addEventListener('keyup',e=>keys.delete(e.code));
 function kb(){let x=0,y=0;if(keys.has('KeyW')||keys.has('ArrowUp'))y++;if(keys.has('KeyS')||keys.has('ArrowDown'))y--;if(keys.has('KeyA')||keys.has('ArrowLeft'))x--;if(keys.has('KeyD')||keys.has('ArrowRight'))x++;return{x,y}}
-const collisionRects=[
- {x1:-21.2,x2:-12.8,z1:-7.2,z2:-.7},{x1:-13.8,x2:-9.2,z1:-6.4,z2:-2.5},
- {x1:10.2,x2:13.8,z1:3.7,z2:6.3},{x1:14.2,x2:17.8,z1:5.7,z2:8.3},{x1:17.2,x2:20.8,z1:2.7,z2:5.3},
- {x1:25.3,x2:30.7,z1:-5.3,z2:-.7},{x1:29.3,x2:34.7,z1:-.3,z2:4.3},{x1:25.3,x2:30.7,z1:4.7,z2:9.3}
-];
-function blockedAt(p){const r=.38;return collisionRects.some(b=>p.x+r>b.x1&&p.x-r<b.x2&&p.z+r>b.z1&&p.z-r<b.z2)}
+function blockedAt(p){return realmBlockedAt(p.x,p.z,.38,false,false)}
 function tryMove(v,amount){
- const next=player.position.clone().addScaledVector(v,amount);next.x=THREE.MathUtils.clamp(next.x,-22.5,37.5);next.z=THREE.MathUtils.clamp(next.z,-12.5,12.5);
+ const next=player.position.clone().addScaledVector(v,amount);next.x=THREE.MathUtils.clamp(next.x,WORLD.x0+1,WORLD.x1-1);next.z=THREE.MathUtils.clamp(next.z,WORLD.z0+1,WORLD.z1-1);
  if(!blockedAt(next)){player.position.copy(next);return}
  const nx=player.position.clone();nx.x=next.x;if(!blockedAt(nx))player.position.x=nx.x;
  const nz=player.position.clone();nz.z=next.z;if(!blockedAt(nz))player.position.z=nz.z;
@@ -398,29 +533,55 @@ function move(dt){
   else{moving=false;setKingAnimation('idle')}
 }function cam(dt){const t=player.position.clone().add(new THREE.Vector3(0,seated?1.05:1.48,0)),cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp),p=t.clone().addScaledVector(dir,seated?4.45:5.35);camera.position.lerp(p,1-Math.exp(-dt*8));camera.lookAt(t)}
 function proximity(){
- attackBtn.disabled=!raidActive||seated;
+ attackBtn.disabled=seated||(!raidActive&&!S.powers.valemar.war);
  if(seated){currentTarget=throne;interactBtn.disabled=false;interactBtn.textContent='STAND';nearbyEl.textContent='Seated on the Royal Throne';return}
  let best=null,bd=999;
- for(const n of npcs){const d=player.position.distanceTo(n.root.position);n.ring.material.opacity=d<2.5?.42:.12;if(d<2.15&&d<bd){best=n;bd=d}}
+ if(livingRenderer)for(const v of livingRenderer.targets){
+   const d=player.position.distanceTo(v.root.position);if(d<2.35&&d<bd){best={isLiving:true,actor:v.actor,root:v.root,ring:v.ring,name:v.actor.name,role:actorRole(v.actor)};bd=d}
+ }
  for(const w of worldInteractables){const d=player.position.distanceTo(w.root.position);w.ring.material.opacity=d<2.8?.48:.15;if(d<2.25&&d<bd){best=w;bd=d}}
  const td=player.position.distanceTo(throne.pos);throne.ring.material.opacity=td<2.2?.35:.18;if(td<1.75&&td<bd){best=throne;bd=td}
  currentTarget=best;
- if(best){interactBtn.disabled=false;interactBtn.textContent=best.isThrone?'THRONE':best.isWorldAction?'USE':'AUDIENCE';nearbyEl.textContent=best.isThrone?'Your Royal Throne':best.name+(best.role?' · '+best.role:'')}
- else{interactBtn.disabled=true;interactBtn.textContent='AUDIENCE';nearbyEl.textContent=''}
+ if(best){
+   interactBtn.disabled=false;interactBtn.textContent=best.isThrone?'THRONE':best.isWorldAction?'USE':'AUDIENCE';
+   nearbyEl.textContent=best.isThrone?'Your Royal Throne':best.isLiving?best.actor.name+' · '+activityOf(best.actor):best.name+(best.role?' · '+best.role:'')
+ }else{interactBtn.disabled=true;interactBtn.textContent='AUDIENCE';nearbyEl.textContent=''}
 }
-function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);mixers.forEach(m=>m.update(dt));move(dt);updateNPCWander(dt);updateGuards(dt);updateArmy(dt);updateRaid(dt);updateLighting(dt);updateZone();cam(dt);proximity();renderer.render(scene,camera)}
+function loop(){
+ requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);fpsEMA=fpsEMA*.94+(1/Math.max(.001,dt))*.06;mixers.forEach(m=>m.update(dt));
+ move(dt);simPlayer.x=player.position.x;simPlayer.y=player.position.y;simPlayer.z=player.position.z;simPlayer.yaw=player.rotation.y;simPlayer.seated=seated;
+ advanceTime(dt);stepAll(dt);if(livingRenderer)livingRenderer.update(player.position,dt);if(worldRenderer)worldRenderer.update(player.position);
+ updateRaid(dt);updateWarfront(dt);updateLighting(dt);updateZone();cam(dt);proximity();
+ autosaveT+=dt;if(autosaveT>=5){autosaveT=0;save();renderStats();refreshCommandStatus()}
+ renderer.render(scene,camera)
+}
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight)});
 function bootProgressive(){
-  guardMode=realm.guardMode||'patrol';armyMode=realm.armyMode||'drill';buildCastleExpansion();buildDistrictInteractions();updateObjective();refreshCommandStatus();
-  const zn=document.getElementById('zoneName');if(zn)zn.textContent='ROYAL COURT';
+  guardMode=realm.guardMode||'routine';armyMode=realm.armyMode||'routine';
+  player.position.set(Number.isFinite(S.king.x)?S.king.x:0,0,Number.isFinite(S.king.z)?S.king.z:9);
+  player.rotation.y=Number.isFinite(S.king.yaw)?S.king.yaw:Math.PI;
+  worldRenderer=createWorldGeometry(world);buildDistrictInteractions();updateObjective();refreshCommandStatus();
+  const zn=document.getElementById('zoneName');if(zn)zn.textContent=zoneAt(player.position.x,player.position.z);
   setTimeout(()=>loadPlayer().catch(console.error),0);
-  const guards=[[-2,3.2],[2,3.2],[-3.2,1.5],[3.2,1.5],[-4.2,-1],[4.2,-1]];
-  guards.forEach((pos,i)=>setTimeout(()=>loadRoyalGuard('Royal Guard '+(i+1),pos).catch(console.error),220+i*80));
-  const armyCount=Math.max(8,Math.min(20,realm.armySize||8));realm.armySize=armyCount;
-  for(let i=0;i<armyCount;i++){const pos=[-20+(i%4)*1.7,0,2-Math.floor(i/4)*1.5];setTimeout(()=>loadArmySoldier('Crown Soldier '+(i+1),pos).then(refreshCommandStatus).catch(console.error),760+i*55)}
-  specs.forEach((spec,i)=>setTimeout(()=>loadNPC(spec).catch(console.error),1250+i*180));
-  setTimeout(()=>loadEnvironment().catch(console.error),1900);
-  setTimeout(()=>loadCastleDetailAssets().catch(console.error),2250);
+  setTimeout(()=>loadEnvironment().catch(console.error),120);
+  setTimeout(()=>createLivingRenderer(scene).then(r=>{livingRenderer=r;toast('THE CROWNLANDS LIVE — '+actors.length+' PEOPLE SIMULATING')}).catch(console.error),260);
+  setTimeout(()=>loadCastleDetailAssets().catch(console.error),700);
 }
+window.__crownlandsDebug={
+  snapshot:()=>({
+    version:'v10-living-world',
+    ready,
+    fps:Math.round(fpsEMA),
+    player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated},
+    zone:currentZone,
+    time:{clock:+S.clock.toFixed(2),day:simDay(),year:simYear(),season:seasonName()},
+    realm:{coin:S.realm.coin,favor:S.realm.favor,security:S.realm.security,prosperity:S.realm.prosperity,stock:{...S.stock}},
+    population:{total:actors.length,visible:livingRenderer?.visibleCount?.()||0,renderCapacity:livingRenderer?.capacity||0,onDutyGuards:onDutyGuards().length,army:S.army.size},
+    military:{guardMode:S.guard.mode,armyDirective:S.army.directive,raidActive,raiders:aliveRaiders().length},
+    diplomacy:diplomacySummary(),
+    ledger:S.ledger.last,
+    bootError:window.__crownlandsBootError||''
+  })
+};
 loop();
 requestAnimationFrame(()=>requestAnimationFrame(bootProgressive));
