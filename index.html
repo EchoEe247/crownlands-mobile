@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Crownlands — The King</title>
 <link rel="stylesheet" href="./src/style.css">
-<link rel="modulepreload" href="./dist/game.fast.js?v=14">
+<link rel="modulepreload" href="./dist/game.fast.js?v=15">
 </head>
 <body>
 <div id="game"></div>
@@ -31,6 +31,7 @@
 <div id="lookHint">DRAG RIGHT SIDE TO LOOK</div>
 <button id="attack" type="button" disabled>ATTACK</button>
 <button id="orders" type="button">ORDERS</button>
+<button id="cameraMode" type="button" aria-label="Switch camera view">CAM 3RD</button>
 <button id="interact" type="button" disabled>AUDIENCE</button>
 
 <div id="dialogue" class="hidden" role="dialog" aria-modal="true">
@@ -49,7 +50,7 @@
     <p>No climb to the throne. No tutorial peasant. The Crownlands are already yours.</p>
     <div class="oath">Your realm is already alive. Guards rotate shifts, soldiers train, workers produce supplies, villages trade, and rival powers make their own plans. Rule directly whenever you choose.</div>
     <button id="begin" type="button">ENTER YOUR COURT</button>
-    <small>Mobile: left thumb moves · drag right to turn · AUDIENCE talks/orders · ORDERS commands guard, army and diplomacy</small>
+    <small>Mobile: left thumb moves · drag right to look · CAM switches 3rd/1st person · AUDIENCE interacts · ORDERS commands the realm</small>
   </div>
 </div>
 
@@ -77,6 +78,6 @@ window.addEventListener('error',(e)=>{
   }
 });
 </script>
-<script type="module" src="./dist/game.fast.js?v=14"></script>
+<script type="module" src="./dist/game.fast.js?v=15"></script>
 </body>
 </html>

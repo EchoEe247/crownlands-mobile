@@ -14,7 +14,7 @@ import {createWorldGeometry} from './render/world.js';
 import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA} from './presentation.js';
 
 const $=id=>document.getElementById(id);
-const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
+const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),cameraModeBtn=$('cameraMode'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
 
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight);
@@ -30,7 +30,7 @@ const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStan
 const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
-let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraYaw=0,cameraPitch=KING_CAMERA.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
+let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraPitch=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
 const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
 let savedState=null,legacyState=null;
@@ -132,6 +132,7 @@ async function loadPlayer(){
     });
     addRoyalRegalia();
     const crown=makeRoyalCrown();crown.position.set(0,1.84,0);royalRegalia.add(crown);
+    syncCameraMode();
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
       const idle=g.animations.find(a=>/^idle$/i.test(a.name))||g.animations[0];
@@ -543,6 +544,24 @@ function standThrone(){
 function openThrone(){if(seated){standThrone();return}if(done()){dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent='Seat of the Crown';speakerName.textContent='Your Throne';choicesEl.innerHTML='';dialogueText.textContent='The day’s petitions are settled. Sit to close court, or begin the next day now.';const sit=document.createElement('button');sit.innerHTML='<b>Sit on the throne</b><small>Take your seat before the court.</small>';sit.onclick=()=>{closeDialog();sitThrone()};choicesEl.appendChild(sit);const b=document.createElement('button');b.innerHTML='<b>Begin the next day</b><small>Collect crown revenue and summon fresh petitions.</small>';b.onclick=()=>{closeDialog();nextDay()};choicesEl.appendChild(b)}else sitThrone()}
 ordersBtn.onclick=()=>{if(!dialogueOpen)openGuardOrders()};
 attackBtn.onclick=kingAttack;
+function syncCameraMode(){
+  const first=cameraMode==='first';
+  if(playerVisual)playerVisual.visible=!first;
+  if(royalRegalia)royalRegalia.visible=!first;
+  if(cameraModeBtn){
+    cameraModeBtn.textContent=first?'CAM 1ST':'CAM 3RD';
+    cameraModeBtn.classList.toggle('first-person',first);
+    cameraModeBtn.setAttribute('aria-label',first?'Switch to third-person camera':'Switch to first-person camera');
+  }
+}
+function toggleCameraMode(){
+  cameraMode=cameraMode==='third'?'first':'third';
+  const cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;
+  cameraPitch=THREE.MathUtils.clamp(cameraPitch,cfg.minPitch,cfg.maxPitch);
+  syncCameraMode();
+  toast(cameraMode==='first'?'FIRST-PERSON VIEW':'THIRD-PERSON VIEW');
+}
+cameraModeBtn.onclick=toggleCameraMode;
 interactBtn.onclick=()=>{if(dialogueOpen)return;if(seated){standThrone();return}if(!currentTarget)return;if(currentTarget.isThrone)openThrone();else if(currentTarget.isWorldAction)currentTarget.openFn();else if(currentTarget.isLiving)openActorAudience(currentTarget.actor);else audience(currentTarget)};
 beginBtn.onclick=()=>{initAudio();royalChime();intro.classList.add('hidden');toast('LONG LIVE KING ALDRIC')};
 addEventListener('pagehide',save);addEventListener('visibilitychange',()=>{if(document.hidden)save()});
@@ -556,7 +575,7 @@ function joyEnd(e){if(e.pointerId!==joyId)return;joyId=null;moveX=moveY=0;stick.
 // camera drag
 let lookId=null,lx=0,ly=0;
 renderer.domElement.onpointerdown=e=>{if(dialogueOpen||e.clientX<innerWidth*.38)return;lookId=e.pointerId;lx=e.clientX;ly=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)};
-renderer.domElement.onpointermove=e=>{if(e.pointerId!==lookId)return;cameraYaw-=(e.clientX-lx)*.0065;cameraPitch=THREE.MathUtils.clamp(cameraPitch-(e.clientY-ly)*.0045,.05,.62);lx=e.clientX;ly=e.clientY};
+renderer.domElement.onpointermove=e=>{if(e.pointerId!==lookId)return;cameraYaw-=(e.clientX-lx)*.0065;const cfg=cameraMode==='first'?KING_CAMERA.first:KING_CAMERA.third;cameraPitch=THREE.MathUtils.clamp(cameraPitch-(e.clientY-ly)*.0045,cfg.minPitch,cfg.maxPitch);lx=e.clientX;ly=e.clientY};
 renderer.domElement.onpointerup=e=>{if(e.pointerId===lookId)lookId=null};renderer.domElement.onpointercancel=renderer.domElement.onpointerup;
 const keys=new Set();addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyE'&&currentTarget&&!dialogueOpen)(currentTarget.isThrone?openThrone():currentTarget.isWorldAction?currentTarget.openFn():currentTarget.isLiving?openActorAudience(currentTarget.actor):audience(currentTarget))});addEventListener('keyup',e=>keys.delete(e.code));
 function kb(){let x=0,y=0;if(keys.has('KeyW')||keys.has('ArrowUp'))y++;if(keys.has('KeyS')||keys.has('ArrowDown'))y--;if(keys.has('KeyA')||keys.has('ArrowLeft'))x--;if(keys.has('KeyD')||keys.has('ArrowRight'))x++;return{x,y}}
@@ -572,7 +591,19 @@ function move(dt){
   const k=kb();let x=k.x||moveX,y=k.y||moveY,l=Math.hypot(x,y);
   if(l>.08){if(l>1){x/=l;y/=l}const f=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)),r=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw)),v=f.multiplyScalar(y).add(r.multiplyScalar(x));tryMove(v,dt*3.35);player.rotation.y=Math.atan2(v.x,v.z);moving=true;setKingAnimation('walk')}
   else{moving=false;setKingAnimation('idle')}
-}function cam(dt){const t=player.position.clone().add(new THREE.Vector3(0,seated?KING_CAMERA.seatedTargetY:KING_CAMERA.standingTargetY,0)),cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp),p=t.clone().addScaledVector(dir,seated?KING_CAMERA.seatedDistance:KING_CAMERA.standingDistance);camera.position.lerp(p,1-Math.exp(-dt*8));camera.lookAt(t)}
+}function cam(dt){
+  const blend=1-Math.exp(-dt*11);
+  if(cameraMode==='first'){
+    const cfg=KING_CAMERA.first,eye=player.position.clone().add(new THREE.Vector3(0,seated?1.18:cfg.eyeHeight,0));
+    const cp=Math.cos(cameraPitch),forward=new THREE.Vector3(-Math.sin(cameraYaw)*cp,-Math.sin(cameraPitch),-Math.cos(cameraYaw)*cp);
+    camera.position.lerp(eye,blend);camera.lookAt(eye.clone().add(forward.multiplyScalar(8)));return
+  }
+  const cfg=KING_CAMERA.third;
+  const t=player.position.clone().add(new THREE.Vector3(0,seated?cfg.seatedTargetY:cfg.standingTargetY,0));
+  const cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp);
+  const p=t.clone().addScaledVector(dir,seated?cfg.seatedDistance:cfg.standingDistance);
+  camera.position.lerp(p,blend);camera.lookAt(t)
+}
 function proximity(){
  attackBtn.disabled=seated||(!raidActive&&!S.powers.valemar.war);
  if(seated){currentTarget=throne;interactBtn.disabled=false;interactBtn.textContent='STAND';nearbyEl.textContent='Seated on the Royal Throne';return}
@@ -610,11 +641,11 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v14-npc-scale-king',
+    version:'v15-mobile-camera-modes',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
-    presentation:{fov:KING_CAMERA.fov,distance:seated?KING_CAMERA.seatedDistance:KING_CAMERA.standingDistance,targetY:seated?KING_CAMERA.seatedTargetY:KING_CAMERA.standingTargetY,pitch:+cameraPitch.toFixed(3)},
+    presentation:{fov:KING_CAMERA.fov,cameraMode,pitch:+cameraPitch.toFixed(3),thirdDistance:seated?KING_CAMERA.third.seatedDistance:KING_CAMERA.third.standingDistance},
     zone:currentZone,
     time:{clock:+S.clock.toFixed(2),day:simDay(),year:simYear(),season:seasonName()},
     realm:{coin:S.realm.coin,favor:S.realm.favor,security:S.realm.security,prosperity:S.realm.prosperity,stock:{...S.stock}},

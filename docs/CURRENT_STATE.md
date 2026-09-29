@@ -1,4 +1,4 @@
-# Current State — V14 Living World
+# Current State — V15 Living World
 
 Date: 2026-09-29
 
@@ -108,3 +108,8 @@ The king is now 1.86 m versus the living NPC baseline of 1.72 m (about 8% taller
 V13 still looked oversized on the actual Pixel frame. V14 stops trying to rescue the Quaternius knight by scaling it. The playable king now uses the same CC0 3DAssets.dev City Guard character family used by normal living-world humans, normalized to 1.80 m versus the NPC baseline of 1.72 m (about 4.7% taller).
 
 Royal identity is layered onto that normal human silhouette: deep royal-blue armor/clothing, brighter polished gold, dark iron/leather, a jeweled crown, ruby diagonal sash, chest medallion, layered pauldrons, gold belt/buckle, broad back cape, collar, and scabbard/pommel detail. Camera distance is increased to 20 m standing so the player no longer dominates the phone frame. This is now the intended player-art direction: ordinary-human proportions first, royal detail second.
+
+
+## V15 mobile camera modes
+
+V15 keeps the corrected V14 NPC-scale king and replaces the temporary far verification camera with actual mobile gameplay cameras. Third-person is the default at 4.8 m with a 66° FOV; at the 1.80 m king height the nominal full body occupies about 29% of the vertical frame, leaving head/feet margin while keeping the character readable. A dedicated on-screen CAM button toggles first-person. First-person uses a 1.62 m eye height and hides the player mesh/regalia to prevent head/cape clipping. Right-side drag look works in both modes with mode-specific pitch limits.
