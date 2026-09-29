@@ -1,4 +1,4 @@
-# Current State — V16 Living World
+# Current State — V17 Living World
 
 Date: 2026-09-29
 
@@ -120,3 +120,10 @@ V15 keeps the corrected V14 NPC-scale king and replaces the temporary far verifi
 The V15 Pixel screenshot confirmed the king size was finally correct but exposed an overly steep orbit angle during look input. V16 lowers the default third-person orbit, reduces its maximum upward pitch so it cannot become an overhead camera, and brings the standing distance slightly closer to 4.45 m.
 
 Touch input no longer writes directly to the rendered camera angles. Swipes update yaw/pitch targets with lower mobile sensitivity, while the rendered yaw, pitch, and follow position converge with exponential damping. Horizontal damping uses wrapped angle deltas so crossing ±π never causes a long spin. First-person uses the same smoothed look targets with its wider pitch range. The result is a stable third-person follow camera with deliberate, non-jittery look movement rather than the V15 snap/overhead behavior.
+
+
+## V17 king fit and landscape HUD
+
+The V16 real-device screenshots exposed two remaining presentation defects. First, the underlying guard-family body was correctly human-sized, but the separately-authored royal ornaments were much too large, especially the collar/shoulders/cape, visually swallowing the head and torso. V17 removes the redundant floating torus belt/collar, shrinks the shoulder caps, sash, medallion and scabbard, shortens/narrows the cape so it starts below the neck, removes the inherited guard spear/helmet shells, and attaches the crown directly to the animated head node so the visible skin head and crown move together instead of floating independently.
+
+Second, landscape objective/status labels were consuming too much of the central play view. Landscape-only CSS moves objective to 58 px and guard/zone status to 84 px (war status 106 px), while portrait positioning is intentionally unchanged.

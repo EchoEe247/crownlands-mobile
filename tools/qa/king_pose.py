@@ -26,12 +26,12 @@ def add_box(name,scale,loc,material):
     return o
 
 def add_crown(parent, z=2.0):
-    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=.19, depth=.11, location=(0,0,0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=.105, depth=.055, location=(0,0,0))
     band=bpy.context.object; band.data.materials.append(gold); band.parent=parent; band.location=(0,0,z)
-    for i in range(8):
-        a=i/8*math.tau
-        bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=.045, radius2=0, depth=.19, location=(0,0,0))
-        p=bpy.context.object;p.data.materials.append(gold);p.parent=parent;p.location=(math.cos(a)*.155,math.sin(a)*.155,z+.14)
+    for i in range(6):
+        a=i/6*math.tau
+        bpy.ops.mesh.primitive_cone_add(vertices=5, radius1=.018, radius2=0, depth=.095, location=(0,0,0))
+        p=bpy.context.object;p.data.materials.append(gold);p.parent=parent;p.location=(math.cos(a)*.084,math.sin(a)*.084,z+.068)
 
 def build_throne(x):
     parts=[]
@@ -99,7 +99,11 @@ def import_king(x, seated=False):
             # align pelvis to seat; carrier Z is adjusted below from visual bbox
             carrier.location.z=-.18
             carrier.location.y=-.05
-    add_crown(carrier,1.84 if not seated else 1.84)
+    for o in imported:
+        if o.name.lower().startswith(('face','hair','weapon')):
+            o.hide_render=True
+            o.hide_viewport=True
+    add_crown(carrier,1.76 if not seated else 1.76)
     return carrier
 
 # floor

@@ -5,6 +5,17 @@ export const KING_HEIGHT_M=1.80;
 export const KING_REGALIA_REFERENCE_HEIGHT_M=1.80;
 export const KING_REGALIA_SCALE=KING_HEIGHT_M/KING_REGALIA_REFERENCE_HEIGHT_M;
 
+export const KING_REGALIA={
+  pauldronRadius:.085,
+  capeTopY:1.43,
+  capeBottomY:.66,
+  capeTopHalfWidth:.22,
+  capeBottomHalfWidth:.30,
+  sashHeight:.48,
+  crownRadius:.105,
+  crownSpikeHeight:.095,
+};
+
 export const KING_CAMERA={
   fov:66,
   defaultMode:'third',

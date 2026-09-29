@@ -11,7 +11,7 @@ import {diplomacySummary,relation,treaty,declareWar,makePeace} from './sim/strat
 import {populateWorld,snapshotActors} from './sim/population.js';
 import {createLivingRenderer} from './render/living.js';
 import {createWorldGeometry} from './render/world.js';
-import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA} from './presentation.js';
+import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_CAMERA} from './presentation.js';
 
 const $=id=>document.getElementById(id);
 const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),cameraModeBtn=$('cameraMode'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
@@ -30,7 +30,7 @@ const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStan
 const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
 
-let playerVisual,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraYawTarget=0,cameraPitch=KING_CAMERA.third.defaultPitch,cameraPitchTarget=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
+let playerVisual,kingHead,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraYawTarget=0,cameraPitch=KING_CAMERA.third.defaultPitch,cameraPitchTarget=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
 const mixers=[],raiders=[],worldInteractables=[],kingRest=new Map();
 let savedState=null,legacyState=null;
@@ -113,7 +113,9 @@ async function loadPlayer(){
       if(n==='shin-l')shinL=o;if(n==='shin-r')shinR=o;
       if(n==='arm-l')armL=o;if(n==='arm-r')armR=o;
       if(n==='fore-l')foreL=o;if(n==='fore-r')foreR=o;
-      if(n==='torso')torso=o;if(n==='city-guard')hips=o;
+      if(n==='torso')torso=o;if(n==='head')kingHead=o;if(n==='city-guard')hips=o;
+      // Remove the guard helmet/visor shells so the actual skin head remains visible under the crown.
+      if(n==='face'||n==='hair'||n==='weapon')o.visible=false;
       if(n)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
         o.frustumCulled=false;
@@ -131,7 +133,9 @@ async function loadPlayer(){
       }
     });
     addRoyalRegalia();
-    const crown=makeRoyalCrown();crown.position.set(0,1.84,0);royalRegalia.add(crown);
+    const crown=makeRoyalCrown();
+    if(kingHead){crown.position.set(0,.30,0);kingHead.add(crown)}
+    else{crown.position.set(0,1.76,0);royalRegalia.add(crown)}
     syncCameraMode();
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
@@ -146,15 +150,16 @@ async function loadPlayer(){
   }catch(e){
     console.error(e);
     const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,1.08,6,12),new THREE.MeshStandardMaterial({color:0x162a58,metalness:.42,roughness:.4}));
-    body.position.y=.9;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,1.84,0);royalRegalia.add(c);
+    body.position.y=.9;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,1.76,0);royalRegalia.add(c);
   }
   loadedEssential++;checkReady()
 }
 function makeRoyalCrown(){
   const g=new THREE.Group(),gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
-  const band=new THREE.Mesh(new THREE.CylinderGeometry(.125,.125,.09,18,1,true),gold);band.castShadow=true;g.add(band);
-  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.027,.15,5),gold);p.position.set(Math.cos(a)*.105,.105,Math.sin(a)*.105);p.castShadow=true;g.add(p)}
-  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.022),ruby);gem.position.set(Math.sin(a)*.126,.01,Math.cos(a)*.126);g.add(gem)}
+  const radius=KING_REGALIA.crownRadius;
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,.055,18,1,true),gold);band.castShadow=true;g.add(band);
+  for(let i=0;i<6;i++){const a=i/6*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.018,KING_REGALIA.crownSpikeHeight,5),gold);p.position.set(Math.cos(a)*radius*.80,.068,Math.sin(a)*radius*.80);p.castShadow=true;g.add(p)}
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.014),ruby);gem.position.set(Math.sin(a)*radius*1.01,0,Math.cos(a)*radius*1.01);g.add(gem)}
   return g
 }
 function addRoyalRegalia(){
@@ -164,38 +169,44 @@ function addRoyalRegalia(){
   const navy=new THREE.MeshStandardMaterial({color:0x14264c,metalness:.18,roughness:.5});
   const jewel=new THREE.MeshStandardMaterial({color:0xb71935,metalness:.18,roughness:.25});
 
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.245,.022,8,28),gold);belt.rotation.x=Math.PI/2;belt.position.set(0,.86,0);r.add(belt);
-  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.10,.085,.04),gold);buckle.position.set(0,.86,.24);buckle.castShadow=true;r.add(buckle);
+  // The guard base already has a belt. Add only a compact royal buckle so it
+  // does not read as a floating gold hoop around the torso.
+  const buckle=new THREE.Mesh(new THREE.BoxGeometry(.075,.055,.028),gold);buckle.position.set(0,.86,.19);buckle.castShadow=true;r.add(buckle);
 
-  const sash=new THREE.Mesh(new THREE.BoxGeometry(.105,.68,.025),ruby);sash.position.set(.07,1.18,.235);sash.rotation.z=-.42;sash.castShadow=true;r.add(sash);
-  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.06),gold);med.position.set(0,1.30,.285);med.castShadow=true;r.add(med);
-  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.027),jewel);gem.position.set(0,1.30,.34);r.add(gem);
+  // Slim ruby sash and small jeweled medallion: readable, but subordinate to the body.
+  const sash=new THREE.Mesh(new THREE.BoxGeometry(.070,KING_REGALIA.sashHeight,.018),ruby);sash.position.set(.045,1.18,.185);sash.rotation.z=-.38;sash.castShadow=true;r.add(sash);
+  const med=new THREE.Mesh(new THREE.OctahedronGeometry(.038),gold);med.position.set(0,1.30,.215);med.castShadow=true;r.add(med);
+  const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.017),jewel);gem.position.set(0,1.30,.245);r.add(gem);
 
-  for(const x of [-.31,.31]){
-    const pauldron=new THREE.Mesh(new THREE.SphereGeometry(.15,12,8,0,Math.PI*2,0,Math.PI*.58),gold);
-    pauldron.scale.set(1.1,.55,1.15);pauldron.position.set(x,1.43,0);pauldron.rotation.z=x<0?-.18:.18;pauldron.castShadow=true;r.add(pauldron);
-    const inset=new THREE.Mesh(new THREE.SphereGeometry(.105,10,7,0,Math.PI*2,0,Math.PI*.52),navy);
-    inset.scale.set(1.05,.5,1.08);inset.position.set(x,1.445,.02);r.add(inset);
+  // Compact shoulder caps; V14-V16 used ornaments nearly as wide as the torso.
+  for(const x of [-.205,.205]){
+    const pauldron=new THREE.Mesh(new THREE.SphereGeometry(KING_REGALIA.pauldronRadius,12,8,0,Math.PI*2,0,Math.PI*.58),gold);
+    pauldron.scale.set(1.05,.52,1.08);pauldron.position.set(x,1.39,0);pauldron.rotation.z=x<0?-.14:.14;pauldron.castShadow=true;r.add(pauldron);
+    const inset=new THREE.Mesh(new THREE.SphereGeometry(KING_REGALIA.pauldronRadius*.68,10,7,0,Math.PI*2,0,Math.PI*.52),navy);
+    inset.scale.set(1,.48,1);inset.position.set(x,1.398,.01);r.add(inset);
   }
 
+  // Back-only cape sized to the 1.80 m NPC-family body. It starts below the
+  // neck so the head/crown remain completely visible from behind.
   const cols=7,rows=7,verts=[],idx=[];
   for(let y=0;y<rows;y++){
-    const t=y/(rows-1),yy=1.53-t*.92,half=.34+t*.17;
+    const t=y/(rows-1),yy=KING_REGALIA.capeTopY+(KING_REGALIA.capeBottomY-KING_REGALIA.capeTopY)*t;
+    const half=KING_REGALIA.capeTopHalfWidth+(KING_REGALIA.capeBottomHalfWidth-KING_REGALIA.capeTopHalfWidth)*t;
     for(let x=0;x<cols;x++){
       const u=x/(cols-1),xx=(u*2-1)*half;
-      const curve=Math.pow(Math.abs(u-.5)*2,1.7)*.035;
-      const zz=-.25-.06*t+curve;
+      const curve=Math.pow(Math.abs(u-.5)*2,1.7)*.018;
+      const zz=-.17-.035*t+curve;
       verts.push(xx,yy,zz)
     }
   }
   for(let y=0;y<rows-1;y++)for(let x=0;x<cols-1;x++){const a=y*cols+x,b=a+1,c=a+cols,d=c+1;idx.push(a,c,b,b,c,d)}
   const capeGeo=new THREE.BufferGeometry();capeGeo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));capeGeo.setIndex(idx);capeGeo.computeVertexNormals();
   cape=new THREE.Mesh(capeGeo,ruby);cape.castShadow=true;cape.receiveShadow=true;r.add(cape);
-  for(const x of [-.24,.24]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.036,10,8),gold);clasp.position.set(x,1.49,-.20);clasp.castShadow=true;r.add(clasp)}
+  for(const x of [-.145,.145]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.022,10,8),gold);clasp.position.set(x,1.415,-.145);clasp.castShadow=true;r.add(clasp)}
 
-  const collar=new THREE.Mesh(new THREE.TorusGeometry(.19,.025,8,22),gold);collar.rotation.x=Math.PI/2;collar.position.set(0,1.48,0);r.add(collar);
-  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.027,.034,.62,8),navy);scabbard.position.set(.29,.62,-.02);scabbard.rotation.z=-.15;scabbard.castShadow=true;r.add(scabbard);
-  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),gold);pommel.position.set(.335,.94,-.02);r.add(pommel);
+  // A narrow scabbard provides detail without crossing the silhouette.
+  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.018,.023,.55,8),navy);scabbard.position.set(.255,.62,-.015);scabbard.rotation.z=-.13;scabbard.castShadow=true;r.add(scabbard);
+  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.030,8,6),gold);pommel.position.set(.29,.90,-.015);r.add(pommel);
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
@@ -649,7 +660,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v16-smooth-mobile-camera',
+    version:'v17-king-regalia-fit',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import {NPC_HEIGHT_M,KING_HEIGHT_M,KING_REGALIA_SCALE,KING_CAMERA} from '../src/presentation.js';
+import {readFileSync} from 'node:fs';
+import {NPC_HEIGHT_M,KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_CAMERA} from '../src/presentation.js';
 
 const ratio=KING_HEIGHT_M/NPC_HEIGHT_M;
 assert.ok(ratio>=1.03&&ratio<=1.07,'king must be only slightly taller than living NPCs');
 assert.ok(KING_HEIGHT_M<=1.82,'king may not regress to oversized world scale');
 assert.ok(Math.abs(KING_REGALIA_SCALE-1)<.01,'regalia is authored directly for the NPC-family king');
+assert.ok(KING_REGALIA.pauldronRadius<=.09,'royal shoulder detail must not dwarf the NPC-family torso');
+assert.ok(KING_REGALIA.capeTopHalfWidth<=.23&&KING_REGALIA.capeBottomHalfWidth<=.31,'cape must remain inside a human-scale silhouette');
+assert.ok(KING_REGALIA.capeTopY<=1.45,'cape must begin below the head so the king head stays visible');
+assert.ok(KING_REGALIA.crownRadius<=.11&&KING_REGALIA.crownSpikeHeight<=.10,'crown must fit the head rather than become a floating prop');
 assert.ok(KING_CAMERA.fov>=64&&KING_CAMERA.fov<=70,'camera FOV must retain useful environment context');
 assert.equal(KING_CAMERA.defaultMode,'third','mobile gameplay must start in third person');
 assert.ok(KING_CAMERA.third.standingDistance>=4.2&&KING_CAMERA.third.standingDistance<=4.8,'third-person camera should be close but retain full-body framing');
@@ -18,3 +23,10 @@ const nominalBodyFraction=KING_HEIGHT_M/(2*KING_CAMERA.third.standingDistance*Ma
 assert.ok(nominalBodyFraction>=.29&&nominalBodyFraction<=.36,'third-person full body should remain readable without clipping');
 
 console.log(JSON.stringify({ok:true,NPC_HEIGHT_M,KING_HEIGHT_M,ratio,nominalBodyFraction,KING_REGALIA_SCALE,KING_CAMERA},null,2));
+const gameSource=readFileSync(new URL('../src/game.js',import.meta.url),'utf8');
+const cssSource=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
+assert.match(gameSource,/if\(n==='head'\)kingHead=o/,'runtime must capture the animated head node');
+assert.match(gameSource,/kingHead\.add\(crown\)/,'crown must be attached to the animated head');
+assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n==='weapon'/,'guard helmet shells and guard spear must be removed from the king base');
+assert.match(cssSource,/@media \(orientation:landscape\)/,'landscape HUD override must exist');
+assert.match(cssSource,/#objective\{top:58px\}/,'landscape objective must be raised');
