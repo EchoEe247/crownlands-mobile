@@ -6,12 +6,12 @@ export const KING_REGALIA_REFERENCE_HEIGHT_M=1.80;
 export const KING_REGALIA_SCALE=KING_HEIGHT_M/KING_REGALIA_REFERENCE_HEIGHT_M;
 
 export const KING_REGALIA={
-  pauldronRadius:.085,
-  capeTopY:1.43,
-  capeBottomY:.66,
-  capeTopHalfWidth:.22,
-  capeBottomHalfWidth:.30,
-  sashHeight:.48,
+  pauldronRadius:.065,
+  capeTopY:1.34,
+  capeBottomY:.78,
+  capeTopHalfWidth:.18,
+  capeBottomHalfWidth:.24,
+  sashHeight:.42,
   crownRadius:.105,
   crownSpikeHeight:.095,
 };
@@ -26,8 +26,8 @@ export const KING_CAMERA={
     positionDamping:13,
   },
   third:{
-    standingDistance:4.45,
-    seatedDistance:4.05,
+    standingDistance:3.95,
+    seatedDistance:3.75,
     standingTargetY:.94,
     seatedTargetY:.84,
     defaultPitch:.08,

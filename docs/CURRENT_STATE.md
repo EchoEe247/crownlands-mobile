@@ -1,4 +1,4 @@
-# Current State — V17 Living World
+# Current State — V18 Living World
 
 Date: 2026-09-29
 
@@ -127,3 +127,9 @@ Touch input no longer writes directly to the rendered camera angles. Swipes upda
 The V16 real-device screenshots exposed two remaining presentation defects. First, the underlying guard-family body was correctly human-sized, but the separately-authored royal ornaments were much too large, especially the collar/shoulders/cape, visually swallowing the head and torso. V17 removes the redundant floating torus belt/collar, shrinks the shoulder caps, sash, medallion and scabbard, shortens/narrows the cape so it starts below the neck, removes the inherited guard spear/helmet shells, and attaches the crown directly to the animated head node so the visible skin head and crown move together instead of floating independently.
 
 Second, landscape objective/status labels were consuming too much of the central play view. Landscape-only CSS moves objective to 58 px and guard/zone status to 84 px (war status 106 px), while portrait positioning is intentionally unchanged.
+
+## V18 real-device attachment and rotation fix
+
+The V17 phone screenshots showed two concrete remaining defects. The body/head scale was correct, but cape/shoulder/scabbard pieces could visually detach because those accessories were anchored to the static player root while the imported guard body animated internally. V18 preserves the accessories' fitted world transform and reparents the royal-regalia group to the animated torso. The crown remains attached to the animated head.
+
+The screenshots also exposed that device rotation had no renderer/camera resize path. V18 updates the WebGL renderer and camera aspect from the current VisualViewport on resize/orientation changes, so portrait and landscape no longer reuse stale dimensions. Third-person distance is tightened to 3.95 m (3.75 m seated), while cape, pauldrons and scabbard are reduced again to keep the human silhouette readable. Landscape status bars are stacked slightly higher with reduced objective padding.

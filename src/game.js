@@ -23,6 +23,14 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;g
 
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x90a7bd);scene.fog=new THREE.Fog(0x90a7bd,28,205);
 const camera=new THREE.PerspectiveCamera(KING_CAMERA.fov,innerWidth/innerHeight,.08,280),loader=new GLTFLoader(),clock=new THREE.Clock();
+function resizeView(){
+  const vv=window.visualViewport,w=Math.max(1,Math.round(vv?.width||innerWidth)),h=Math.max(1,Math.round(vv?.height||innerHeight));
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()
+}
+addEventListener('resize',resizeView,{passive:true});
+addEventListener('orientationchange',()=>requestAnimationFrame(resizeView),{passive:true});
+window.visualViewport?.addEventListener('resize',resizeView,{passive:true});
+resizeView();
 const hemi=new THREE.HemisphereLight(0xd9eaff,0x594330,2);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffe5b2,3);sun.position.set(-7,13,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-12,right:12,top:12,bottom:-12,near:1,far:32});scene.add(sun);
 const fill=new THREE.PointLight(0xffbd68,12,12,2);fill.position.set(0,3.3,5.7);scene.add(fill);
@@ -133,6 +141,11 @@ async function loadPlayer(){
       }
     });
     addRoyalRegalia();
+    // The royal clothing was previously anchored to the player root while the
+    // body animated underneath it. Preserve its world-space fit, then parent it
+    // to the torso so cape/shoulders/sash move with the king instead of floating.
+    player.updateMatrixWorld(true);playerVisual.updateMatrixWorld(true);
+    if(torso){torso.updateMatrixWorld(true);torso.attach(royalRegalia)}
     const crown=makeRoyalCrown();
     if(kingHead){crown.position.set(0,.30,0);kingHead.add(crown)}
     else{crown.position.set(0,1.76,0);royalRegalia.add(crown)}
@@ -205,8 +218,8 @@ function addRoyalRegalia(){
   for(const x of [-.145,.145]){const clasp=new THREE.Mesh(new THREE.SphereGeometry(.022,10,8),gold);clasp.position.set(x,1.415,-.145);clasp.castShadow=true;r.add(clasp)}
 
   // A narrow scabbard provides detail without crossing the silhouette.
-  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.018,.023,.55,8),navy);scabbard.position.set(.255,.62,-.015);scabbard.rotation.z=-.13;scabbard.castShadow=true;r.add(scabbard);
-  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.030,8,6),gold);pommel.position.set(.29,.90,-.015);r.add(pommel);
+  const scabbard=new THREE.Mesh(new THREE.CylinderGeometry(.016,.020,.38,8),navy);scabbard.position.set(.245,.64,-.012);scabbard.rotation.z=-.11;scabbard.castShadow=true;r.add(scabbard);
+  const pommel=new THREE.Mesh(new THREE.SphereGeometry(.024,8,6),gold);pommel.position.set(.266,.84,-.012);r.add(pommel);
 }
 function resetKingBones(){for(const b of [hips,torso,legL,legR,shinL,shinR,armL,armR,foreL,foreR]){if(!b)continue;const r=kingRest.get(b.name);if(r){b.quaternion.copy(r.q);b.position.copy(r.p)}}}
 function rotateBone(b,axis,angle){if(!b)return;const r=kingRest.get(b.name);if(r)b.quaternion.copy(r.q);b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,angle))}
@@ -660,11 +673,11 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v17-king-regalia-fit',
+    version:'v18-mobile-fit',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
-    presentation:{fov:KING_CAMERA.fov,cameraMode,yaw:+cameraYaw.toFixed(3),yawTarget:+cameraYawTarget.toFixed(3),pitch:+cameraPitch.toFixed(3),pitchTarget:+cameraPitchTarget.toFixed(3),thirdDistance:seated?KING_CAMERA.third.seatedDistance:KING_CAMERA.third.standingDistance},
+    presentation:{fov:KING_CAMERA.fov,cameraMode,viewport:[camera.aspect,+(((window.visualViewport?.width)||innerWidth)/((window.visualViewport?.height)||innerHeight)).toFixed(3)],yaw:+cameraYaw.toFixed(3),yawTarget:+cameraYawTarget.toFixed(3),pitch:+cameraPitch.toFixed(3),pitchTarget:+cameraPitchTarget.toFixed(3),thirdDistance:seated?KING_CAMERA.third.seatedDistance:KING_CAMERA.third.standingDistance},
     zone:currentZone,
     time:{clock:+S.clock.toFixed(2),day:simDay(),year:simYear(),season:seasonName()},
     realm:{coin:S.realm.coin,favor:S.realm.favor,security:S.realm.security,prosperity:S.realm.prosperity,stock:{...S.stock}},

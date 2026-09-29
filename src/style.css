@@ -18,8 +18,8 @@
 
 
 @media (orientation:landscape){
-  #objective{top:58px}
-  #guardStatus{top:84px}
-  #zoneName{top:84px}
-  #warStatus{top:106px}
+  #objective{top:54px;padding:5px 11px}
+  #guardStatus{top:78px}
+  #zoneName{top:78px}
+  #warStatus{top:99px}
 }
