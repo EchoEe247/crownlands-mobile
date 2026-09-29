@@ -1,4 +1,4 @@
-# Current State — V19 Living World
+# Current State — V20 Living World
 
 Date: 2026-09-29
 
@@ -140,3 +140,10 @@ The screenshots also exposed that device rotation had no renderer/camera resize 
 The V18 real-device result still looked essentially unchanged because the fundamental scale calculation was wrong. The City Guard GLB measures about 3.39 units when its spear is included, but the humanoid body is only about 1.87 units. V14-V18 normalized the entire GLB to the requested character height, unintentionally shrinking the king's human body to roughly one meter while separately-authored royal details stayed visually dominant.
 
 V19 adds shared body-only character bounds that exclude the weapon hierarchy from scale calculations. The king is now fitted from the actual humanoid body to 1.80 m, and living guard NPCs use the same rule at 1.72 m. The spear remains available for NPC guards but no longer controls their human height; the player's full weapon subtree is hidden. This is the root-cause correction for the small-body/giant-regalia screenshots, not another camera-only adjustment.
+
+
+## V20 crown placement correction
+
+V19 fixed the king body scale, leaving the crown as the final visible defect. Direct Blender measurement of the guard asset shows the animated head origin at raw Z 1.571696 and the visible skin-head mesh top at 1.831376, an offset of about 0.260 units. The prior crown offset of 0.18 therefore placed most of the crown inside the head.
+
+V20 places the crown at a measured 0.278 local head offset so the band overlaps the skull top only slightly, removes the obsolete inverse-scale compensation, and sizes the band to 0.13 radius with 0.11 spikes so it is readable on the roughly 0.303-unit-wide guard head. The crown remains parented to the animated head and automatically disappears in first-person when the player visual is hidden.

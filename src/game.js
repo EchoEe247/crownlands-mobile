@@ -149,7 +149,7 @@ async function loadPlayer(){
     player.updateMatrixWorld(true);playerVisual.updateMatrixWorld(true);
     if(torso){torso.updateMatrixWorld(true);torso.attach(royalRegalia)}
     const crown=makeRoyalCrown();
-    if(kingHead){const inv=1/Math.max(.01,playerVisual.scale.x);crown.scale.setScalar(inv);crown.position.set(0,.18,0);kingHead.add(crown)}
+    if(kingHead){crown.position.set(0,KING_REGALIA.crownHeadOffset,0);kingHead.add(crown)}
     else{crown.position.set(0,1.76,0);royalRegalia.add(crown)}
     syncCameraMode();
     if(g.animations?.length){
@@ -170,11 +170,11 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeRoyalCrown(){
-  const g=new THREE.Group(),gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
+  const g=new THREE.Group();g.name='royal-crown';g.userData.isRoyalCrown=true;const gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
   const radius=KING_REGALIA.crownRadius;
-  const band=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,.055,18,1,true),gold);band.castShadow=true;g.add(band);
-  for(let i=0;i<6;i++){const a=i/6*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.018,KING_REGALIA.crownSpikeHeight,5),gold);p.position.set(Math.cos(a)*radius*.80,.068,Math.sin(a)*radius*.80);p.castShadow=true;g.add(p)}
-  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.014),ruby);gem.position.set(Math.sin(a)*radius*1.01,0,Math.cos(a)*radius*1.01);g.add(gem)}
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,KING_REGALIA.crownBandHeight,20,1,true),gold);band.castShadow=true;g.add(band);
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,p=new THREE.Mesh(new THREE.ConeGeometry(.024,KING_REGALIA.crownSpikeHeight,5),gold);p.position.set(Math.cos(a)*radius*.80,KING_REGALIA.crownBandHeight*.5+KING_REGALIA.crownSpikeHeight*.43,Math.sin(a)*radius*.80);p.castShadow=true;g.add(p)}
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.019),ruby);gem.position.set(Math.sin(a)*radius*1.01,0,Math.cos(a)*radius*1.01);g.add(gem)}
   return g
 }
 function addRoyalRegalia(){
@@ -666,7 +666,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v19-body-scale-root-fix',
+    version:'v20-visible-crown',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

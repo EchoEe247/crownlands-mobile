@@ -9,7 +9,9 @@ assert.ok(Math.abs(KING_REGALIA_SCALE-1)<.01,'regalia is authored directly for t
 assert.ok(KING_REGALIA.pauldronRadius<=.07,'legacy pauldron limit remains bounded even though V19 uses fitted model shoulders');
 assert.ok(KING_REGALIA.capeTopHalfWidth<=.19&&KING_REGALIA.capeBottomHalfWidth<=.25,'cape must remain inside a human-scale silhouette');
 assert.ok(KING_REGALIA.capeTopY<=1.45,'cape must begin below the head so the king head stays visible');
-assert.ok(KING_REGALIA.crownRadius<=.09&&KING_REGALIA.crownSpikeHeight<=.08,'crown must fit the head rather than become a floating prop');
+assert.ok(KING_REGALIA.crownRadius>=.12&&KING_REGALIA.crownRadius<=.14,'crown band must be wide enough to read on the measured guard head');
+assert.ok(KING_REGALIA.crownSpikeHeight>=.10&&KING_REGALIA.crownSpikeHeight<=.12,'crown spikes must be visible without becoming oversized');
+assert.ok(KING_REGALIA.crownHeadOffset>=.27&&KING_REGALIA.crownHeadOffset<=.29,'crown must sit at the measured top of the guard head rather than inside it');
 assert.ok(KING_CAMERA.fov>=64&&KING_CAMERA.fov<=70,'camera FOV must retain useful environment context');
 assert.equal(KING_CAMERA.defaultMode,'third','mobile gameplay must start in third person');
 assert.ok(KING_CAMERA.third.standingDistance>=3.7&&KING_CAMERA.third.standingDistance<=4.1,'third-person camera should be close enough for mobile character readability');
@@ -26,7 +28,9 @@ console.log(JSON.stringify({ok:true,NPC_HEIGHT_M,KING_HEIGHT_M,ratio,nominalBody
 const gameSource=readFileSync(new URL('../src/game.js',import.meta.url),'utf8');
 const cssSource=readFileSync(new URL('../src/style.css',import.meta.url),'utf8');
 assert.match(gameSource,/if\(n==='head'\)kingHead=o/,'runtime must capture the animated head node');
-assert.match(gameSource,/kingHead\.add\(crown\)/,'crown must be attached to the animated head');
+assert.match(gameSource,/crown\.position\.set\(0,KING_REGALIA\.crownHeadOffset,0\);kingHead\.add\(crown\)/,'crown must be placed above and attached to the animated head');
+assert.doesNotMatch(gameSource,/crown\.scale\.setScalar\(inv\)/,'crown must not use the obsolete inverse-scale transform');
+assert.match(gameSource,/g\.name='royal-crown'/,'crown must have an explicit runtime identity');
 assert.match(gameSource,/torso\.attach\(royalRegalia\)/,'royal clothing must follow the animated torso');
 assert.match(gameSource,/function resizeView\(\)/,'camera must update renderer size and aspect on device rotation');
 assert.match(gameSource,/fitCharacterHeight\(playerVisual,KING_HEIGHT_M\)/,'player scale must be fitted from humanoid body bounds rather than held equipment');
