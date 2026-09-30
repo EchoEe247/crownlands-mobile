@@ -1,6 +1,6 @@
-# Current State — V27 / Face Unresolved
+# Current State — V28 Coherent Head Candidate
 
-Date: 2026-09-29 (V27 rejected on Pixel; face work paused)
+Date: 2026-09-29 (V28 coherent replacement head implemented; Pixel acceptance pending)
 
 ## Verified implementation
 
@@ -72,7 +72,7 @@ Runtime browser probe reports:
 
 ## Current acceptance status
 
-**The king face/head profile remains unresolved. V27 was rejected on Pixel.** V27 corrected a real geometry error and passed automated/profile-bound checks, but the actual device result still did not meet the user's requirement. GPT-5.6 Sol made multiple follow-up attempts, including V26 and V27, and could not fix the face to an acceptable real-device result. This is now recorded as a known unresolved visual defect rather than a pending acceptance item.
+**V21–V27 remain rejected Pixel face/profile history. V28 is now the active candidate.** The user explicitly reopened the face work with a coherent-replacement design: stock `head.001` is hidden and a single faceted low-poly head owns the full cranial/facial silhouette. This is a materially different implementation from the prior paper-thin overlay route. V28 is pending Pixel acceptance and is not yet a confirmed fix.
 
 What is accepted from the recent presentation work:
 - king world scale is in the intended NPC family range (1.80 m vs 1.72 m baseline)
@@ -82,11 +82,11 @@ What is accepted from the recent presentation work:
 - the player remains embodied and mobile controls continue to function
 
 What is **not** accepted:
-- king face/head profile on Pixel
+- V28 front/exact-side/3/4 face acceptance on Pixel
 - final facial proportions/readability at gameplay distance
-- V27 as a successful face fix or acceptable baseline
+- any claim that V28 is fixed before real-device screenshots
 
-**Face work status:** paused. No further V27/procedural-overlay iteration is planned. If the user explicitly reopens the face later, start from one coherent replacement modeled/rigged head asset and validate on Pixel first rather than continuing to tune the current overlay construction.
+**Face work status:** reopened for V28 using one coherent replacement head. Do not regress to V21–V27 sticker/overlay construction. Pixel screenshots remain the acceptance gate.
 
 ## Known limitation
 
@@ -101,9 +101,23 @@ When development resumes, real-device work can continue independently of the unr
 6. one raid
 7. optionally a Blackmere war/campaign
 
-The face should stay paused unless explicitly reopened.
+The V28 face should remain pending until Pixel front/side/3/4 evidence is reviewed.
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
+
+## V28 coherent replacement head — pending Pixel acceptance
+
+V28 is a new implementation path requested after the V21–V27 failures:
+
+- stock player `head.001` is hidden
+- `king-head-coherent-v28` is attached to the animated head bone through the existing `kingHead.add(makeMasculineKingFace())` path
+- one faceted skull shell owns the cranial silhouette
+- a modest integrated nose, trimmed beard volume, ears and fitted short hair are part of the replacement construction
+- V27 paper-thin marker geometry is removed from the current face function
+- king body scale remains 1.80 m; crown, regalia, cameras, controls and simulation are unchanged
+- presentation tests assert the V28 identity and prevent V27 markers from returning
+
+**Acceptance status:** implementation/build tests are preflight only. V28 must be judged on Pixel Android Chrome from front, exact side and 3/4 before it can be called fixed.
 
 ## V27 measured-surface attempt — rejected on Pixel
 

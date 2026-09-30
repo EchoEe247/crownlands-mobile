@@ -23,12 +23,12 @@
 
 ## Next quality milestones
 
-### Paused unresolved blocker — king head/profile
-- V25 and V27 are both **rejected on Pixel**
-- GPT-5.6 Sol made multiple face/profile attempts and did not achieve an acceptable real-device result
-- V27 corrected a real lower-face depth bug and constrained overlays to <3 mm beyond the measured stock surface, but that still did not solve the user's visual complaint
-- no further procedural-overlay face iteration is planned in the current work state
-- if the face is revisited later, replace it with one coherent modeled/rigged head asset and judge it on Pixel first
+### Immediate blocker — V28 coherent king head/profile
+- V21–V27 are rejected Pixel history
+- V28 explicitly abandons paper-thin sticker overlays and hides stock `head.001`
+- one coherent faceted replacement head now owns the skull, nose, beard/jaw volume, ears and hair silhouette
+- validate V28 front, exact side and 3/4 views on actual Pixel Chrome before acceptance
+- do not claim V28 fixed from automated/build/Blender evidence alone
 - preserve the already-correct body scale, crown, camera modes, regalia and mobile controls
 
 ### Real-device polish

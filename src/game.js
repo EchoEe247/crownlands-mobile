@@ -129,8 +129,8 @@ async function loadPlayer(){
       if(n==='arm-l')armL=o;if(n==='arm-r')armR=o;
       if(n==='fore-l')foreL=o;if(n==='fore-r')foreR=o;
       if(n==='torso')torso=o;if(n==='head')kingHead=o;if(n==='city-guard')hips=o;
-      // Remove the guard helmet/visor shells so the actual skin head remains visible under the crown.
-      if(n==='face'||n==='hair'||n.startsWith('weapon'))o.visible=false;
+      // Hide the stock head/face/hair and guard weapons so V28 owns the player head silhouette.
+      if(n==='face'||n==='hair'||n==='head.001'||n.startsWith('weapon'))o.visible=false;
       if(n)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
         o.frustumCulled=false;
@@ -179,49 +179,130 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeMasculineKingFace(){
-  // V27: head.001 is the complete cranial/facial silhouette.
-  // Custom geometry is limited to paper-thin identity markings placed against
-  // measured surface depths from the authored GLB. No custom nose, jaw, chin,
-  // cheek, or rear-head mass is allowed to redefine the side profile.
-  const g=new THREE.Group();g.name='king-face-silhouette-neutral-v27';g.userData.isKingFace=true;g.userData.profileSource='head.001';g.userData.profileGeometry='stock-only';
-  const eyeWhite=new THREE.MeshStandardMaterial({color:0xeee5d5,roughness:.64,metalness:0});
-  const iris=new THREE.MeshStandardMaterial({color:0x426274,roughness:.48,metalness:0});
-  const pupil=new THREE.MeshStandardMaterial({color:0x090909,roughness:.8,metalness:0});
-  const hair=new THREE.MeshStandardMaterial({color:0x352116,roughness:.92,metalness:0});
-  const beard=new THREE.MeshStandardMaterial({color:0x3a2419,roughness:.95,metalness:0});
-  const lip=new THREE.MeshStandardMaterial({color:0x623631,roughness:.88,metalness:0});
-  const eyeY=-.1278,browY=-.1252,moustacheY=-.0712,mouthY=-.0588,beardY=-.0588;
+  // V28: coherent replacement head. Stock head.001 is hidden; one faceted low-poly
+  // king head owns the full cranial + facial silhouette (front, side, 3/4).
+  // Modest nose/jaw/beard only — no giant sphere hair, no floating sticker planes.
+  // Local head space: +X right, -Y face-forward, +Z up (matches guard head bone).
+  const g=new THREE.Group();g.name='king-head-coherent-v28';g.userData.isKingFace=true;g.userData.profileSource='coherent-replacement';g.userData.profileGeometry='v28-head';
+  const skin=new THREE.MeshStandardMaterial({color:0xc08a60,roughness:.72,metalness:0});
+  const hairM=new THREE.MeshStandardMaterial({color:0x2e1c12,roughness:.94,metalness:0});
+  const beardM=new THREE.MeshStandardMaterial({color:0x3a2418,roughness:.95,metalness:0});
+  const eyeWhite=new THREE.MeshStandardMaterial({color:0xf0e8d8,roughness:.55,metalness:0});
+  const iris=new THREE.MeshStandardMaterial({color:0x3d5a6e,roughness:.42,metalness:0});
+  const pupil=new THREE.MeshStandardMaterial({color:0x0a0a0a,roughness:.85,metalness:0});
+  const lip=new THREE.MeshStandardMaterial({color:0x6a3a34,roughness:.8,metalness:0});
+  const browM=new THREE.MeshStandardMaterial({color:0x2a1810,roughness:.9,metalness:0});
 
-  // Hair remains inside the measured stock head bounds.
-  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.216,.090,.010),hair);
-  hairTop.name='king-hair-top-v27';hairTop.position.set(0,.014,.252);g.add(hairTop);
-  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.208,.008,.056),hair);
-  hairBack.name='king-hair-back-v27';hairBack.position.set(0,.122,.188);g.add(hairBack);
+  // --- Skull shell (faceted, adult male proportions inside measured guard head volume) ---
+  const skullGeo=new THREE.BufferGeometry();
+  const rings=[
+    [0.255, [[0,-0.04],[0.06,-0.03],[0.10,0.02],[0.07,0.08],[0,0.10],[-0.07,0.08],[-0.10,0.02],[-0.06,-0.03]]],
+    [0.18,  [[0,-0.10],[0.09,-0.08],[0.14,0.00],[0.11,0.10],[0,0.13],[-0.11,0.10],[-0.14,0.00],[-0.09,-0.08]]],
+    [0.10,  [[0,-0.125],[0.10,-0.10],[0.15,-0.01],[0.12,0.11],[0,0.14],[-0.12,0.11],[-0.15,-0.01],[-0.10,-0.10]]],
+    [0.02,  [[0,-0.12],[0.11,-0.09],[0.155,0.00],[0.12,0.11],[0,0.135],[-0.12,0.11],[-0.155,0.00],[-0.11,-0.09]]],
+    [-0.05, [[0,-0.105],[0.10,-0.08],[0.145,0.01],[0.11,0.10],[0,0.12],[-0.11,0.10],[-0.145,0.01],[-0.10,-0.08]]],
+    [-0.11, [[0,-0.09],[0.09,-0.06],[0.13,0.02],[0.09,0.08],[0,0.10],[-0.09,0.08],[-0.13,0.02],[-0.09,-0.06]]],
+    [-0.16, [[0,-0.07],[0.07,-0.04],[0.10,0.02],[0.06,0.05],[0,0.06],[-0.06,0.05],[-0.10,0.02],[-0.07,-0.04]]],
+    [-0.20, [[0,-0.04],[0.04,-0.02],[0.05,0.01],[0.03,0.03],[0,0.03],[-0.03,0.03],[-0.05,0.01],[-0.04,-0.02]]],
+  ];
+  const positions=[];
+  for(const [z,pts] of rings){
+    for(const [x,y] of pts) positions.push(x,y,z);
+  }
+  const topC=positions.length/3; positions.push(0,0.02,0.28);
+  const botC=positions.length/3; positions.push(0,0.01,-0.22);
+  const idx=[];
+  const R=8;
+  for(let r=0;r<rings.length-1;r++){
+    for(let i=0;i<R;i++){
+      const a=r*R+i, b=r*R+((i+1)%R), c=(r+1)*R+i, d=(r+1)*R+((i+1)%R);
+      idx.push(a,c,b, b,c,d);
+    }
+  }
+  for(let i=0;i<R;i++){ idx.push(topC, i, (i+1)%R); }
+  const base=(rings.length-1)*R;
+  for(let i=0;i<R;i++){ idx.push(botC, base+((i+1)%R), base+i); }
+  skullGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  skullGeo.setIndex(idx);
+  skullGeo.computeVertexNormals();
+  const skull=new THREE.Mesh(skullGeo,skin);skull.name='king-skull-v28';skull.castShadow=true;g.add(skull);
 
-  // Paper-thin front markings follow the measured eye/brow surface.
-  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const eye=new THREE.Mesh(new THREE.BoxGeometry(.043,.002,.014),eyeWhite);
-    eye.name='king-eye-white-v27';eye.position.set(x,eyeY,KING_FACE.eyeZ);g.add(eye);
-    const ir=new THREE.Mesh(new THREE.BoxGeometry(.012,.0015,.012),iris);
-    ir.name='king-iris-v27';ir.position.set(x,eyeY-.0009,KING_FACE.eyeZ);g.add(ir);
-    const pu=new THREE.Mesh(new THREE.BoxGeometry(.0048,.001,.0075),pupil);
-    pu.name='king-pupil-v27';pu.position.set(x,eyeY-.0015,KING_FACE.eyeZ);g.add(pu);
-    const brow=new THREE.Mesh(new THREE.BoxGeometry(.069,.002,.009),hair);
-    brow.name='king-brow-v27';brow.position.set(x,browY,KING_FACE.browZ);brow.rotation.z=x<0?.06:-.06;g.add(brow)
+  // --- Nose (modest projection, integrated) ---
+  const noseGeo=new THREE.BufferGeometry();
+  const nv=[
+    0,-0.125,0.08,
+    0,-0.145,0.04,
+    0,-0.155,0.00,
+    0.018,-0.130,0.02,
+   -0.018,-0.130,0.02,
+    0,-0.120,-0.02,
+  ];
+  const ni=[0,1,3, 0,4,1, 1,2,3, 1,4,2, 2,5,3, 2,4,5];
+  noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(nv,3));
+  noseGeo.setIndex(ni);noseGeo.computeVertexNormals();
+  const nose=new THREE.Mesh(noseGeo,skin);nose.name='king-nose-v28';g.add(nose);
+
+  // --- Eyes ---
+  for(const x of [-0.055,0.055]){
+    const socket=new THREE.Mesh(new THREE.BoxGeometry(0.038,0.012,0.018),new THREE.MeshStandardMaterial({color:0xa87855,roughness:.75}));
+    socket.position.set(x,-0.118,0.055);g.add(socket);
+    const white=new THREE.Mesh(new THREE.BoxGeometry(0.032,0.006,0.014),eyeWhite);
+    white.position.set(x,-0.124,0.055);g.add(white);
+    const ir=new THREE.Mesh(new THREE.BoxGeometry(0.014,0.005,0.012),iris);
+    ir.position.set(x,-0.127,0.055);g.add(ir);
+    const pu=new THREE.Mesh(new THREE.BoxGeometry(0.006,0.004,0.008),pupil);
+    pu.position.set(x,-0.129,0.055);g.add(pu);
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(0.055,0.012,0.010),browM);
+    brow.position.set(x,-0.115,0.075);brow.rotation.z=x<0?0.12:-0.12;g.add(brow);
   }
 
-  // Lower-face markings use the actual local mesh surface depths instead of
-  // the old generic ~-.14 plane that projected the face centimeters forward.
-  const beardFront=new THREE.Mesh(new THREE.BoxGeometry(.145,.002,.048),beard);
-  beardFront.name='king-trimmed-beard-v27';beardFront.position.set(0,beardY,-.028);g.add(beardFront);
-  for(const x of [-.020,.020]){
-    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.038,.002,.009),beard);
-    moustache.name='king-moustache-v27';moustache.position.set(x,moustacheY,.025);moustache.rotation.z=x<0?.08:-.08;g.add(moustache)
+  // --- Mouth ---
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.048,0.006,0.008),lip);
+  mouth.position.set(0,-0.108,-0.055);g.add(mouth);
+
+  // --- Short trimmed beard volume ---
+  const beardGeo=new THREE.BufferGeometry();
+  const bv=[
+    -0.04,-0.100,-0.02,  0.04,-0.100,-0.02,
+    -0.06,-0.095,-0.06,  0.06,-0.095,-0.06,
+    -0.05,-0.085,-0.14,  0.05,-0.085,-0.14,
+    -0.03,-0.070,-0.18,  0.03,-0.070,-0.18,
+    0,-0.055,-0.19,
+    -0.12,-0.080,0.02,   0.12,-0.080,0.02,
+    -0.11,-0.090,-0.08,  0.11,-0.090,-0.08,
+  ];
+  const bi=[
+    0,1,3, 0,3,2,
+    2,3,5, 2,5,4,
+    4,5,7, 4,7,6,
+    6,7,8,
+    9,0,2, 9,2,11,
+    1,10,12, 1,12,3,
+    11,2,4, 12,5,3,
+  ];
+  beardGeo.setAttribute('position',new THREE.Float32BufferAttribute(bv,3));
+  beardGeo.setIndex(bi);beardGeo.computeVertexNormals();
+  const beard=new THREE.Mesh(beardGeo,beardM);beard.name='king-beard-v28';g.add(beard);
+
+  // --- Short dark hair under crown (fitted, no rear ball) ---
+  const hairTop=new THREE.Mesh(new THREE.SphereGeometry(0.12,8,6,0,Math.PI*2,0,Math.PI*0.55),hairM);
+  hairTop.name='king-hair-top-v28';hairTop.scale.set(1.15,0.85,0.70);hairTop.position.set(0,0.02,0.18);g.add(hairTop);
+  const hairRear=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.06,0.08),hairM);
+  hairRear.name='king-hair-rear-v28';hairRear.position.set(0,0.09,0.14);g.add(hairRear);
+  for(const x of [-0.13,0.13]){
+    const side=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.08,0.10),hairM);
+    side.position.set(x,0.02,0.08);g.add(side);
   }
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.062,.0015,.006),lip);
-  mouth.name='king-mouth-v27';mouth.position.set(0,mouthY,KING_FACE.mouthZ);g.add(mouth);
-  return g
+
+  // Ears
+  for(const x of [-0.155,0.155]){
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.04,0.05),skin);
+    ear.position.set(x,0.00,0.04);g.add(ear);
+  }
+
+  return g;
 }
+
 function makeRoyalCrown(){
   const g=new THREE.Group();g.name='royal-crown';g.userData.isRoyalCrown=true;const gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
   const radius=KING_REGALIA.crownRadius;
@@ -725,7 +806,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v27-silhouette-neutral-face',
+    version:'v28-coherent-replacement-head',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

@@ -21,7 +21,7 @@ The actual game target is Android / Pixel 6a class hardware.
 Current play path:
 
 - Termux hosts the static files locally.
-- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=27` (advance the query value whenever the served bundle version changes).
+- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=28` (advance the query value whenever the served bundle version changes).
 - Ubuntu/proot may be used for Blender/tooling, but it is not the runtime.
 - AWS or another remote VM is not part of the game dependency graph.
 
@@ -146,9 +146,9 @@ Use:
 - Blender headless renders for model/pose QA
 - browser automation for DOM/non-WebGL behavior
 
-### Current visual blocker — unresolved / paused
+### Current visual blocker — V28 pending Pixel acceptance
 
-V27 is **rejected on Pixel**. It corrected a measurable lower-face depth error and passed Blender/profile-bound checks, but the actual device result still did not meet the user's face/profile requirement. GPT-5.6 Sol made multiple attempts, including V26 and V27, and could not fix the face to an acceptable real-device result.
+V21–V27 are **rejected face/profile history**. The user explicitly reopened face work for V28 with a new coherent-replacement strategy. V28 hides stock `head.001` and uses one faceted replacement head for the full cranial/facial silhouette. V28 is pending Pixel acceptance; no local/Blender/build result can close the face issue by itself.
 
 For king/player visual work:
 
@@ -156,8 +156,9 @@ For king/player visual work:
 - Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
 - Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
 - Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
-- Do not continue iterating V27's procedural face-overlay approach unless the user explicitly reopens this work.
-- If face work is reopened, start with one coherent replacement modeled/rigged head and use Pixel-first acceptance. Do not spend another sequence of passes tuning stacked/procedural facial geometry.
+- Do not restore V21–V27 paper-thin/procedural overlay behavior.
+- V28's coherent replacement head may be evaluated and revised only against real Pixel evidence.
+- If V28 is rejected, preserve that rejection in docs rather than claiming success from build or Blender checks.
 
 ## Primary-display safety
 

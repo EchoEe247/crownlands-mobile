@@ -19,9 +19,9 @@ Crownlands prefers assets that are clearly reusable and redistributable. The cur
 
 ## Current player-character asset status
 
-The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia. V27 reuses that asset's coherent `head.001` skin mesh as the complete head/face silhouette; stock helmet/face/hair pieces are hidden and only paper-thin front identity markings plus in-bounds top/rear hair are layered on top. No new third-party character asset was introduced. The legacy Quaternius `king-knight.glb` is not the current player body.
+The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia. For V28, the player hides the stock `head.001` skin mesh and builds one original runtime faceted replacement head on the animated head bone. No new third-party character asset was introduced. The legacy Quaternius `king-knight.glb` is not the current player body.
 
-V25 and V27 are both **rejected** by Pixel face/profile review. GPT-5.6 Sol attempted multiple follow-up face passes and did not achieve an acceptable result. Face work is paused. If a future replacement head is introduced, it must be original or clearly redistributable and recorded here.
+V25 and V27 remain **rejected** by Pixel face/profile review. V28 is the current coherent replacement-head candidate and is pending Pixel acceptance. If a future external replacement head asset is introduced, it must be original or clearly redistributable and recorded here.
 
 ## Source links
 
