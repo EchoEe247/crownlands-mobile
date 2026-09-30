@@ -122,9 +122,11 @@ Current caution: V25 demonstrated that a clean Blender head render can still dis
 
 Current rendering/modeling status:
 - V25 king head/face side profile remains the last **failed real-device evidence**
-- V26 preserves the coherent City Guard `head.001` mesh and removes the V25 replacement skull; only shallow identity overlays remain
+- V27 preserves the coherent City Guard `head.001` mesh as the full side-profile authority and removes all custom nose/jaw/chin geometry
+- Blender inspection found the prior mouth/beard overlays near Y −0.14 while the authored lower-face surface is only about Y −0.058 to −0.071, explaining the exaggerated lower-face projection
+- `tools/qa/king_profile_bounds.py` verifies V27 overlays remain within <3 mm of measured face-surface depth and add zero rear/side/top silhouette
 - runtime/build tests passing does not imply character-visual acceptance
-- V26 requires a fresh Pixel front/side/3/4 review; if it fails, use a single replacement head mesh/model validated on-device
+- V27 requires a fresh Pixel front/side/3/4 review; if it fails, use a single replacement head mesh/model validated on-device
 
 ## Android automation safety
 

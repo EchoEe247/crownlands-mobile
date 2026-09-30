@@ -4,11 +4,11 @@
 
 Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-## Current V26 candidate
+## Current V27 face fix
 
-The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability pass and a new king-head candidate.
+The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability work and the V27 king-face correction.
 
-**Important current visual status:** V25 was rejected on the real Pixel because its procedural side profile was deformed. V26 stops replacing the skull: it keeps the City Guard asset's coherent `head.001` skin mesh and adds only shallow hair/face/beard overlays. The V26 code and geometry invariants are verified, but the face is still **pending fresh Pixel front/side/3/4 acceptance**.
+**Important current visual status:** V27 fixes a concrete geometry error in the prior face overlays. The actual `head.001` lower-face surface is around Y −0.058 to −0.071, while older mouth/beard overlays were near Y −0.14, projecting the lower face roughly 7–8 cm too far forward in model space. V27 keeps `head.001` as the full silhouette, removes custom nose/jaw/chin geometry, and places paper-thin identity features against measured surface depths. Geometry QA now limits custom forward extension to under 3 mm. Fresh Pixel front/side/3/4 acceptance is still required.
 
 - embodied third-person king with touch movement/camera
 - throne sit/stand and court petitions
@@ -44,7 +44,7 @@ cd ~/MainWorkspace/crownlands-mobile
 Open in Android Chrome:
 
 ```
-http://127.0.0.1:5205/?v=26
+http://127.0.0.1:5205/?v=27
 ```
 
 Controls:
@@ -115,7 +115,7 @@ Automated tests currently cover navigation, actor scheduling/order interruption,
 
 The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
 
-**Open visual blocker:** V26 is the first pass to preserve the known-good coherent `head.001` skull instead of authoring a replacement procedural skull. Do not describe the face/profile as fixed until a fresh Pixel Chrome screenshot confirms front, exact side and 3/4 silhouettes. If V26 still fails on-device, replace the head asset/model rather than returning to stacked procedural skull geometry.
+**Visual acceptance:** V27 is the current face fix. It corrects the measured lower-face depth error and removes custom side-profile facial mass. Do not call it visually accepted until a fresh Pixel Chrome screenshot confirms front, exact side and 3/4 silhouettes.
 
 ## Assets and licensing
 

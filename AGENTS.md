@@ -21,7 +21,7 @@ The actual game target is Android / Pixel 6a class hardware.
 Current play path:
 
 - Termux hosts the static files locally.
-- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=26` (advance the query value whenever the served bundle version changes).
+- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=27` (advance the query value whenever the served bundle version changes).
 - Ubuntu/proot may be used for Blender/tooling, but it is not the runtime.
 - AWS or another remote VM is not part of the game dependency graph.
 
@@ -148,7 +148,7 @@ Use:
 
 ### Current visual blocker
 
-V25 is **rejected**: the latest Pixel side-view screenshot showed a deformed procedural profile even though headless QA looked cleaner. V26 now preserves the City Guard asset's coherent `head.001` skin mesh and limits custom work to shallow identity overlays. V26 remains **unaccepted visually** until a fresh Pixel review passes.
+V25 is **rejected**: the latest Pixel side-view screenshot showed a deformed procedural profile. V27 preserves the City Guard asset's coherent `head.001` skin mesh as the complete silhouette. Blender mesh inspection found the prior lower-face overlays were roughly 7–8 cm too far forward in model space; V27 places paper-thin features against measured surface depths and adds no custom nose/jaw/chin geometry. V27 remains **unaccepted visually** until a fresh Pixel review passes.
 
 For king/player visual work:
 
@@ -156,7 +156,7 @@ For king/player visual work:
 - Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
 - Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
 - Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
-- Preserve the coherent stock `head.001` silhouette in V26. If it still fails on Pixel, replace it with one coherent modeled/rigged head; do not return to a custom procedural skull made from stacked face/chin/hair masses.
+- Preserve the coherent stock `head.001` silhouette in V27. Keep overlays within the measured <3 mm profile tolerance enforced by `tools/qa/king_profile_bounds.py`. If it still fails on Pixel, replace it with one coherent modeled/rigged head; do not return to a custom procedural skull.
 
 ## Primary-display safety
 

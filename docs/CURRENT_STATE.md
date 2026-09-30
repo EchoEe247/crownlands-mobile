@@ -1,6 +1,6 @@
-# Current State — V26 Audit & Head Candidate
+# Current State — V27 Face Fix
 
-Date: 2026-09-29 (V26 code/audit pass; latest real-device visual evidence is still the rejected V25 Pixel side view)
+Date: 2026-09-29 (V27 face correction; latest real-device visual evidence is still the rejected V25 Pixel side view)
 
 ## Verified implementation
 
@@ -72,7 +72,7 @@ Runtime browser probe reports:
 
 ## Current acceptance status
 
-**V26 is mechanically verified but not yet visually accepted.** V25 remains the latest real-device evidence and its Pixel Android Chrome side view showed a deformed procedural head/profile. V26 changes the approach: the king now keeps the City Guard asset's coherent `head.001` skin mesh as the skull silhouette and only adds shallow fitted hair, eyes, nose, beard and mouth overlays. Automated presentation/regression checks pass, but a fresh Pixel front/side/3/4 review is still required.
+**V27 is mechanically/geometrically verified but not yet visually accepted.** V25 remains the latest real-device evidence. During V27 diagnosis, Blender inspection of the actual `head.001` mesh found the concrete side-profile bug: prior mouth/beard overlays were near Y −0.14 even though the authored lower-face surface is only about Y −0.058 to −0.071, producing roughly 7–8 cm of false forward projection. V27 removes custom nose/jaw/chin geometry, keeps `head.001` as the complete silhouette, and places paper-thin identity features against measured surface depths. Profile-bounds QA caps custom extension below 3 mm. A fresh Pixel front/side/3/4 review is still required.
 
 What is accepted from the recent presentation work:
 - king world scale is in the intended NPC family range (1.80 m vs 1.72 m baseline)
@@ -82,11 +82,11 @@ What is accepted from the recent presentation work:
 - the player remains embodied and mobile controls continue to function
 
 What is **not** accepted:
-- V26 front/side/3/4 silhouette acceptance on Pixel
+- V27 front/side/3/4 silhouette acceptance on Pixel
 - final facial proportions/readability at gameplay distance
-- any claim that V26 solved the king face/profile problem before fresh real-device evidence
+- any claim that V27 solved the king face/profile problem before fresh real-device evidence
 
-**Next character task:** replace/re-author the head as a coherent model with front/side/3/4 silhouette validation against Pixel screenshots. Do not continue treating procedural primitive placement plus Blender-only QA as sufficient acceptance.
+**Next character task:** validate V27 on Pixel Chrome from front, exact side, rear and 3/4. If it still fails, replace the head with one coherent modeled/rigged asset; do not return to custom projecting facial geometry.
 
 ## Known limitation
 
@@ -103,6 +103,22 @@ The next real-device pass should focus on:
 8. optionally a Blackmere war/campaign
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
+
+## V27 face correction — measured-surface placement
+
+V27 identifies and fixes a concrete geometry error rather than making another cosmetic tweak.
+
+- actual `head.001` eye-region front surface: about Y −0.1271
+- actual brow-region front surface: about Y −0.1245
+- actual moustache-region front surface: about Y −0.0706
+- actual mouth/beard-region front surface: about Y −0.0580
+- earlier lower-face overlays were near Y −0.14, causing roughly 7–8 cm of false forward projection
+- V27 removes custom projecting nose, jaw, chin and cheek geometry
+- eyes, brows, moustache, mouth and beard are paper-thin and placed against measured local surface depths
+- top/rear hair remains inside the authored head bounds
+- `tools/qa/king_profile_bounds.py` verifies maximum custom forward extension below 3 mm with zero rear/side/top extension
+
+**Pixel visual acceptance is still required.**
 
 ## V26 audit/stability pass and stock-head candidate
 

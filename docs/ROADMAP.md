@@ -25,9 +25,10 @@
 
 ### Immediate blocker — king head/profile
 - V25 side-profile rebuild is **rejected on Pixel**; its custom procedural skull remains historical only
-- V26 keeps the coherent City Guard `head.001` skin mesh and uses shallow fitted hair/eyes/nose/beard overlays instead of replacing the skull
-- validate V26 front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
-- if V26 still deforms on-device, move to a single replacement modeled/rigged head asset rather than another procedural skull pass
+- V27 keeps the coherent City Guard `head.001` skin mesh as the complete silhouette and removes custom nose/jaw/chin geometry
+- V27 corrects the measured lower-face depth bug: previous mouth/beard overlays sat roughly 7–8 cm too far forward; current overlays are constrained to <3 mm beyond the measured stock surface
+- validate V27 front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
+- if V27 still deforms on-device, move to a single replacement modeled/rigged head asset rather than another procedural skull pass
 - preserve the already-correct body scale, crown, camera modes, regalia and mobile controls
 
 ### Real-device polish

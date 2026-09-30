@@ -1,6 +1,6 @@
 {
   "name": "crownlands-mobile",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "private": true,
   "description": "Mobile-first 3D king simulation for Android/Pixel-class devices.",
   "type": "module",

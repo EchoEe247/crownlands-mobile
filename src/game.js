@@ -179,69 +179,47 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeMasculineKingFace(){
-  // V26 deliberately keeps the guard asset's coherent head.001 skull mesh.
-  // Earlier V21-V25 passes replaced the skull with stacked/procedural geometry,
-  // which repeatedly failed exact-side Pixel review. This group adds only
-  // shallow identity features that cannot redefine the base cranial silhouette.
-  const g=new THREE.Group();g.name='king-face-stock-head-v26';g.userData.isKingFace=true;g.userData.profileSource='head.001';
-  const skin=new THREE.MeshStandardMaterial({color:0xc18b63,roughness:.72,metalness:0});
-  const skinShadow=new THREE.MeshStandardMaterial({color:0x936047,roughness:.84,metalness:0});
-  const eyeWhite=new THREE.MeshStandardMaterial({color:0xf2eadb,roughness:.58,metalness:0});
-  const iris=new THREE.MeshStandardMaterial({color:0x426274,roughness:.42,metalness:0});
-  const pupil=new THREE.MeshStandardMaterial({color:0x080808,roughness:.7});
-  const hair=new THREE.MeshStandardMaterial({color:0x352116,roughness:.9,metalness:0});
-  const beard=new THREE.MeshStandardMaterial({color:0x3a2419,roughness:.94,metalness:0});
-  const lip=new THREE.MeshStandardMaterial({color:0x5a2c29,roughness:.84,metalness:0});
+  // V27: head.001 is the complete cranial/facial silhouette.
+  // Custom geometry is limited to paper-thin identity markings placed against
+  // measured surface depths from the authored GLB. No custom nose, jaw, chin,
+  // cheek, or rear-head mass is allowed to redefine the side profile.
+  const g=new THREE.Group();g.name='king-face-silhouette-neutral-v27';g.userData.isKingFace=true;g.userData.profileSource='head.001';g.userData.profileGeometry='stock-only';
+  const eyeWhite=new THREE.MeshStandardMaterial({color:0xeee5d5,roughness:.64,metalness:0});
+  const iris=new THREE.MeshStandardMaterial({color:0x426274,roughness:.48,metalness:0});
+  const pupil=new THREE.MeshStandardMaterial({color:0x090909,roughness:.8,metalness:0});
+  const hair=new THREE.MeshStandardMaterial({color:0x352116,roughness:.92,metalness:0});
+  const beard=new THREE.MeshStandardMaterial({color:0x3a2419,roughness:.95,metalness:0});
+  const lip=new THREE.MeshStandardMaterial({color:0x623631,roughness:.88,metalness:0});
+  const eyeY=-.1278,browY=-.1252,moustacheY=-.0712,mouthY=-.0588,beardY=-.0588;
 
-  // Shallow fitted hair: all pieces stay inside the measured stock-head depth.
-  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.214,.112,.020),hair);
-  hairTop.name='king-hair-top';hairTop.position.set(0,.006,.238);g.add(hairTop);
-  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.218,.016,.096),hair);
-  hairBack.name='king-hair-back';hairBack.position.set(0,.116,.174);g.add(hairBack);
-  for(const x of [-.119,.119]){
-    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.015,.070,.092),hair);
-    sideHair.position.set(x,.030,.166);g.add(sideHair)
-  }
-  for(const x of [-.055,-.018,.018,.055]){
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.033,.012,.022),hair);
-    fringe.position.set(x,-.116,.205+(Math.abs(x)<.025?.005:0));fringe.rotation.z=x*.45;g.add(fringe)
-  }
+  // Hair remains inside the measured stock head bounds.
+  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.216,.090,.010),hair);
+  hairTop.name='king-hair-top-v27';hairTop.position.set(0,.014,.252);g.add(hairTop);
+  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.208,.008,.056),hair);
+  hairBack.name='king-hair-back-v27';hairBack.position.set(0,.122,.188);g.add(hairBack);
 
-  // Features are intentionally shallow overlays on head.001.
+  // Paper-thin front markings follow the measured eye/brow surface.
   for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const socket=new THREE.Mesh(new THREE.BoxGeometry(.056,.006,.029),skinShadow);
-    socket.position.set(x,-.129,KING_FACE.eyeZ);g.add(socket);
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,10,7),eyeWhite);
-    eye.scale.set(1.12,.20,.52);eye.position.set(x,-.134,KING_FACE.eyeZ);g.add(eye);
-    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0105,8,6),iris);
-    ir.scale.set(.88,.16,1);ir.position.set(x,-.139,KING_FACE.eyeZ);g.add(ir);
-    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0052,7,5),pupil);
-    pu.scale.set(.88,.14,1);pu.position.set(x,-.142,KING_FACE.eyeZ);g.add(pu);
-    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.008,.016),hair);
-    brow.position.set(x,-.132,KING_FACE.browZ);brow.rotation.y=x<0?-.14:.14;g.add(brow)
+    const eye=new THREE.Mesh(new THREE.BoxGeometry(.043,.002,.014),eyeWhite);
+    eye.name='king-eye-white-v27';eye.position.set(x,eyeY,KING_FACE.eyeZ);g.add(eye);
+    const ir=new THREE.Mesh(new THREE.BoxGeometry(.012,.0015,.012),iris);
+    ir.name='king-iris-v27';ir.position.set(x,eyeY-.0009,KING_FACE.eyeZ);g.add(ir);
+    const pu=new THREE.Mesh(new THREE.BoxGeometry(.0048,.001,.0075),pupil);
+    pu.name='king-pupil-v27';pu.position.set(x,eyeY-.0015,KING_FACE.eyeZ);g.add(pu);
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(.069,.002,.009),hair);
+    brow.name='king-brow-v27';brow.position.set(x,browY,KING_FACE.browZ);brow.rotation.z=x<0?.06:-.06;g.add(brow)
   }
 
-  // Nose is the only feature allowed to project meaningfully beyond the stock head.
-  const noseGeo=new THREE.BufferGeometry();
-  const nv=[-.017,-.128,.156,.017,-.128,.156,-.022,-.132,.082,.022,-.132,.082,0,KING_FACE.noseTipY,.066,-.015,-.133,.047,.015,-.133,.047];
-  const ni=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
-  noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(nv,3));noseGeo.setIndex(ni);noseGeo.computeVertexNormals();
-  const nose=new THREE.Mesh(noseGeo,skin);nose.name='king-profile-nose';nose.castShadow=true;g.add(nose);
-
-  for(const x of [-.104,.104]){
-    const sideburn=new THREE.Mesh(new THREE.BoxGeometry(.024,.007,.098),beard);
-    sideburn.position.set(x,-.127,.025);g.add(sideburn)
-  }
-  const beardChin=new THREE.Mesh(new THREE.BoxGeometry(.160,.007,.052),beard);
-  beardChin.name='king-trimmed-beard';beardChin.position.set(0,-.132,-.043);g.add(beardChin);
+  // Lower-face markings use the actual local mesh surface depths instead of
+  // the old generic ~-.14 plane that projected the face centimeters forward.
+  const beardFront=new THREE.Mesh(new THREE.BoxGeometry(.145,.002,.048),beard);
+  beardFront.name='king-trimmed-beard-v27';beardFront.position.set(0,beardY,-.028);g.add(beardFront);
   for(const x of [-.020,.020]){
-    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.040,.006,.011),beard);
-    moustache.position.set(x,-.143,.034);moustache.rotation.y=x<0?-.08:.08;g.add(moustache)
+    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.038,.002,.009),beard);
+    moustache.name='king-moustache-v27';moustache.position.set(x,moustacheY,.025);moustache.rotation.z=x<0?.08:-.08;g.add(moustache)
   }
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.076,.006,.009),lip);
-  mouth.position.set(0,-.143,KING_FACE.mouthZ);g.add(mouth);
-  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.056,.005,.008),skinShadow);
-  lowerLip.position.set(0,-.139,KING_FACE.mouthZ-.017);g.add(lowerLip);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.062,.0015,.006),lip);
+  mouth.name='king-mouth-v27';mouth.position.set(0,mouthY,KING_FACE.mouthZ);g.add(mouth);
   return g
 }
 function makeRoyalCrown(){
@@ -747,7 +725,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v26-stock-head-audit-fix',
+    version:'v27-silhouette-neutral-face',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

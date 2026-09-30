@@ -35,7 +35,7 @@ assert.match(gameSource,/torso\.attach\(royalRegalia\)/,'royal clothing must fol
 assert.match(gameSource,/function resizeView\(\)/,'camera must update renderer size and aspect on device rotation');
 assert.match(gameSource,/fitCharacterHeight\(playerVisual,KING_HEIGHT_M\)/,'player scale must be fitted from humanoid body bounds rather than held equipment');
 assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n\.startsWith\('weapon'\)/,'stock face/hair and guard weapons must be hidden while the coherent skin head remains');
-assert.doesNotMatch(gameSource,/n==='head\.001'[^\n]*visible=false/,'V26 must keep the coherent stock head.001 mesh visible');
+assert.doesNotMatch(gameSource,/n==='head\.001'[^\n]*visible=false/,'V27 must keep the coherent stock head.001 mesh visible');
 assert.match(cssSource,/@media \(orientation:landscape\)/,'landscape HUD override must exist');
 assert.match(cssSource,/#objective\{top:54px;padding:5px 11px\}/,'landscape objective must be raised');
 const livingSource=readFileSync(new URL('../src/render/living.js',import.meta.url),'utf8');
@@ -45,25 +45,18 @@ assert.match(boundsSource,/name\.startsWith\(p\)/,'body bounds must exclude weap
 assert.doesNotMatch(gameSource,/new THREE\.SphereGeometry\(KING_REGALIA\.pauldronRadius/,'king must not add detached procedural pauldrons');
 assert.doesNotMatch(gameSource,/new THREE\.CylinderGeometry\(\.016,\.020,\.38/,'king must not add a detached procedural scabbard');
 
-assert.match(gameSource,/makeMasculineKingFace\(\)/,'runtime must construct the detailed king face');
-assert.match(gameSource,/g\.name='king-face-stock-head-v26'/,'V26 face group must have an explicit runtime identity');
-assert.match(gameSource,/profileSource='head\.001'/,'V26 must declare the stock head as the side-profile source');
-assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,10,7\)/,'face must include modeled readable eyes');
-assert.match(gameSource,/const noseGeo=new THREE\.BufferGeometry\(\)/,'face must include a modeled nose');
-assert.match(gameSource,/const mouth=new THREE\.Mesh/,'face must include a modeled mouth');
-
-assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,10,7\)/,'face must include mobile-readable eyes');
-assert.match(gameSource,/king-profile-nose/,'face must include a defined straight nose');
-assert.match(gameSource,/king-trimmed-beard/,'face must include a full trimmed beard');
-
-assert.match(gameSource,/king-hair-top/,'reference-inspired king face must include fitted short brown hair');
-assert.match(gameSource,/king-trimmed-beard/,'reference-inspired king face must include a full trimmed beard');
-assert.match(gameSource,/color:0x426274/,'reference-inspired face must use readable blue-gray irises');
-assert.ok(KING_FACE.eyeRadius>=.021,'eyes must remain visible at mobile gameplay distance without looking oversized');
-assert.doesNotMatch(gameSource,/king-head-profile-shell/,'V26 must not replace the coherent stock skull with another procedural shell');
-assert.doesNotMatch(gameSource,/king-square-chin/,'side profile must not use a separate protruding chin block');
-assert.match(gameSource,/king-profile-nose/,'king must include a compact profile-controlled nose');
-assert.match(gameSource,/const sideHair=new THREE\.Mesh/,'reference-inspired face must include fitted short side hair');
-
-assert.doesNotMatch(gameSource,/hairCap=new THREE\.Mesh\(new THREE\.SphereGeometry/,'king hair must not regress to the oversized spherical hair cap seen in side/back mobile screenshots');
-assert.match(gameSource,/king-hair-back/,'king must have a shallow fitted rear hair panel');
+assert.match(gameSource,/makeMasculineKingFace\(\)/,'runtime must construct the king face overlay');
+assert.match(gameSource,/g\.name='king-face-silhouette-neutral-v27'/,'V27 face group must have an explicit runtime identity');
+assert.match(gameSource,/profileSource='head\.001'/,'V27 must declare the stock head as the side-profile source');
+assert.match(gameSource,/profileGeometry='stock-only'/,'V27 must declare stock-only silhouette geometry');
+assert.doesNotMatch(gameSource,/const noseGeo=new THREE\.BufferGeometry\(\)/,'V27 must not add a procedural nose that changes side profile');
+assert.doesNotMatch(gameSource,/king-profile-nose/,'V27 must not add a custom projecting nose');
+assert.doesNotMatch(gameSource,/king-head-profile-shell/,'V27 must not replace the coherent stock skull');
+assert.doesNotMatch(gameSource,/king-square-chin/,'V27 must not add a protruding chin block');
+assert.doesNotMatch(gameSource,/const sideHair=new THREE\.Mesh/,'V27 must not add side hair geometry that changes silhouette');
+assert.doesNotMatch(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius/,'V27 eyes must be thin front overlays, not projecting spheres');
+assert.match(gameSource,/new THREE\.BoxGeometry\(\.043,\.002,\.014\)/,'V27 eyes must use paper-thin front geometry');
+assert.match(gameSource,/king-trimmed-beard-v27/,'V27 beard must be a front-only marking');
+assert.match(gameSource,/king-hair-top-v27/,'V27 may retain a tiny top hair layer inside the stock silhouette');
+assert.match(gameSource,/king-hair-back-v27/,'V27 may retain a shallow rear hair layer inside the stock silhouette');
+assert.match(gameSource,/color:0x426274/,'king face must retain readable blue-gray irises');
