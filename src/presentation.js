@@ -19,22 +19,6 @@ export const KING_REGALIA={
 };
 
 
-export const KING_FACE={
-  eyeX:.056,
-  eyeZ:.138,
-  eyeRadius:.021,
-  browZ:.184,
-  browWidth:.078,
-  noseTipY:-.176,
-  mouthZ:.000,
-  headTopZ:.252,
-  headBottomZ:-.084,
-  headFrontForeheadY:-.122,
-  headFrontMouthY:-.142,
-  headFrontChinY:-.132,
-  headBackY:.118,
-};
-
 export const KING_CAMERA={
   fov:66,
   defaultMode:'third',

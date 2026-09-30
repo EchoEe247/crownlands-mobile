@@ -23,13 +23,12 @@
 
 ## Next quality milestones
 
-### Immediate blocker — V28 coherent king head/profile
+### Paused face work — V29 stock head baseline
 - V21–V27 are rejected Pixel history
-- V28 explicitly abandons paper-thin sticker overlays and hides stock `head.001`
-- one coherent faceted replacement head now owns the skull, nose, beard/jaw volume, ears and hair silhouette
-- validate V28 front, exact side and 3/4 views on actual Pixel Chrome before acceptance
-- do not claim V28 fixed from automated/build/Blender evidence alone
-- preserve the already-correct body scale, crown, camera modes, regalia and mobile controls
+- V28 is also rejected on Pixel; its replacement head rendered as an obviously oversized/deformed blocky face
+- V29 removes every custom king face/head mesh and restores the authored stock `head.001` only
+- no further custom face iteration is planned in the current state
+- preserve the stock head, body scale, crown, camera modes, regalia and mobile controls
 
 ### Real-device polish
 - tune throne sitting on Pixel screenshot evidence

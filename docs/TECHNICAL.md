@@ -121,12 +121,13 @@ Use:
 Current caution: V25 demonstrated that a clean Blender head render can still disagree with the final Pixel side silhouette. For player-character appearance, Blender is preflight only; a fresh real-device screenshot is required before a visual defect can be closed.
 
 Current rendering/modeling status:
-- V21–V27 remain **failed Pixel face/profile history**
-- V28 is the active coherent-replacement attempt
-- stock `head.001` is hidden for the player and one replacement group, `king-head-coherent-v28`, owns the skull/facial silhouette
-- V28 uses a faceted skull shell plus integrated modest nose, beard volume, fitted hair and ears rather than paper-thin V27 markers
-- body scale, crown, regalia, cameras, controls and simulation are intentionally unchanged
-- V28 is pending real Pixel front/side/3/4 acceptance and must not be called fixed before that evidence
+- V21–V27 remain failed Pixel face/profile history
+- V28 is also **rejected on Pixel** from the user's real-device screenshot; its coherent replacement rendered as an oversized/deformed blocky face
+- V29 removes the entire custom face/head construction
+- the authored stock `head.001` skin mesh is visible again; stock `face`/`hair` shells and guard weapons remain hidden
+- no `makeMasculineKingFace()` runtime path remains
+- body scale, crown, regalia, cameras, controls and simulation are unchanged
+- custom face work is paused
 
 ## Android automation safety
 

@@ -21,7 +21,7 @@ The actual game target is Android / Pixel 6a class hardware.
 Current play path:
 
 - Termux hosts the static files locally.
-- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=28` (advance the query value whenever the served bundle version changes).
+- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=29` (advance the query value whenever the served bundle version changes).
 - Ubuntu/proot may be used for Blender/tooling, but it is not the runtime.
 - AWS or another remote VM is not part of the game dependency graph.
 
@@ -146,9 +146,9 @@ Use:
 - Blender headless renders for model/pose QA
 - browser automation for DOM/non-WebGL behavior
 
-### Current visual blocker — V28 pending Pixel acceptance
+### Current face status — V29 stock head only
 
-V21–V27 are **rejected face/profile history**. The user explicitly reopened face work for V28 with a new coherent-replacement strategy. V28 hides stock `head.001` and uses one faceted replacement head for the full cranial/facial silhouette. V28 is pending Pixel acceptance; no local/Blender/build result can close the face issue by itself.
+V21–V27 are rejected face/profile history, and V28 is also **rejected on Pixel**. The V28 replacement produced an obviously oversized/deformed blocky face in the user's real-device screenshot. V29 removes all custom face/head geometry and leaves the authored stock `head.001` skin head visible by itself under the crown.
 
 For king/player visual work:
 
@@ -156,9 +156,9 @@ For king/player visual work:
 - Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
 - Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
 - Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
-- Do not restore V21–V27 paper-thin/procedural overlay behavior.
-- V28's coherent replacement head may be evaluated and revised only against real Pixel evidence.
-- If V28 is rejected, preserve that rejection in docs rather than claiming success from build or Blender checks.
+- Do not restore V21–V28 custom face/head geometry by default.
+- Keep `head.001` visible and do not attach a custom face/head group in V29.
+- If face work is ever reopened, treat Pixel screenshots as the acceptance authority and start from a genuinely different asset/model strategy.
 
 ## Primary-display safety
 

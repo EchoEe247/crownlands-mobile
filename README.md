@@ -4,11 +4,11 @@
 
 Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-## Current build — V28 coherent replacement head
+## Current build — V29 stock head only
 
-The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability work and the V28 coherent replacement-head attempt.
+The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability work and a V29 stock-head-only presentation.
 
-**Important current visual status:** V21–V27 face/profile attempts were rejected on Pixel. V28 is a deliberately different approach requested after that pause: the stock `head.001` mesh is hidden and replaced by one coherent faceted low-poly head that owns the skull, nose, jaw/beard volume, ears, and hair silhouette. V28 is **pending Pixel acceptance** and must not be described as fixed until front, exact-side, and 3/4 screenshots on the Pixel confirm it.
+**Important current visual status:** V28 was rejected immediately on Pixel because the coherent replacement produced an obviously oversized/deformed blocky face. V29 removes the entire custom king face/head stack and restores the authored stock `head.001` skin head by itself. No custom skull, nose, beard, hair, ears, or face overlays are rendered. The crown remains attached to the animated head. Custom face work is paused.
 
 - embodied third-person king with touch movement/camera
 - throne sit/stand and court petitions
@@ -44,7 +44,7 @@ cd ~/MainWorkspace/crownlands-mobile
 Open in Android Chrome:
 
 ```
-http://127.0.0.1:5205/?v=28
+http://127.0.0.1:5205/?v=29
 ```
 
 Controls:
@@ -117,7 +117,7 @@ Automated tests currently cover navigation, actor scheduling/order interruption,
 
 The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
 
-**Current visual blocker:** V28 is the active coherent replacement-head candidate. Prior GPT-5.6 Sol V26/V27 attempts remain documented as failed history. V28 is not accepted yet; Pixel Android Chrome remains the authority for the face.
+**Current face status:** V28 is rejected from direct Pixel evidence. V29 intentionally stops custom face work and uses the plain authored stock head only. Do not reintroduce V21–V28 custom facial geometry unless the user explicitly asks for a new approach.
 
 ## Assets and licensing
 

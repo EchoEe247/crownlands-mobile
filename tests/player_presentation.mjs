@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {NPC_HEIGHT_M,KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_FACE,KING_CAMERA} from '../src/presentation.js';
+import {NPC_HEIGHT_M,KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_CAMERA} from '../src/presentation.js';
 
 const ratio=KING_HEIGHT_M/NPC_HEIGHT_M;
 assert.ok(ratio>=1.03&&ratio<=1.07,'king must be only slightly taller than living NPCs');
@@ -34,7 +34,8 @@ assert.match(gameSource,/g\.name='royal-crown'/,'crown must have an explicit run
 assert.match(gameSource,/torso\.attach\(royalRegalia\)/,'royal clothing must follow the animated torso');
 assert.match(gameSource,/function resizeView\(\)/,'camera must update renderer size and aspect on device rotation');
 assert.match(gameSource,/fitCharacterHeight\(playerVisual,KING_HEIGHT_M\)/,'player scale must be fitted from humanoid body bounds rather than held equipment');
-assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n==='head\.001'\|\|n\.startsWith\('weapon'\)/,'V28 must hide stock face, hair, head.001, and guard weapons before adding the coherent replacement head');
+assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n\.startsWith\('weapon'\)/,'V29 must hide only stock face/hair shells and guard weapons');
+assert.doesNotMatch(gameSource,/n==='head\.001'[^\n]*visible=false/,'V29 must leave the authored stock head.001 visible');
 assert.match(cssSource,/@media \(orientation:landscape\)/,'landscape HUD override must exist');
 assert.match(cssSource,/#objective\{top:54px;padding:5px 11px\}/,'landscape objective must be raised');
 const livingSource=readFileSync(new URL('../src/render/living.js',import.meta.url),'utf8');
@@ -44,18 +45,11 @@ assert.match(boundsSource,/name\.startsWith\(p\)/,'body bounds must exclude weap
 assert.doesNotMatch(gameSource,/new THREE\.SphereGeometry\(KING_REGALIA\.pauldronRadius/,'king must not add detached procedural pauldrons');
 assert.doesNotMatch(gameSource,/new THREE\.CylinderGeometry\(\.016,\.020,\.38/,'king must not add a detached procedural scabbard');
 
-assert.match(gameSource,/makeMasculineKingFace\(\)/,'runtime must construct the king replacement head');
-assert.match(gameSource,/g\.name='king-head-coherent-v28'/,'V28 head group must have an explicit runtime identity');
-assert.match(gameSource,/profileSource='coherent-replacement'/,'V28 must declare the coherent replacement as profile source');
-assert.match(gameSource,/profileGeometry='v28-head'/,'V28 must declare coherent head geometry');
-assert.match(gameSource,/king-skull-v28/,'V28 must include one coherent faceted skull shell');
-assert.match(gameSource,/king-nose-v28/,'V28 must include the integrated modest nose');
-assert.match(gameSource,/king-beard-v28/,'V28 must include trimmed beard volume');
-assert.match(gameSource,/king-hair-top-v28/,'V28 must include fitted short top hair');
-assert.match(gameSource,/color:0x3d5a6e/,'V28 must retain readable blue-gray irises');
-assert.doesNotMatch(gameSource,/king-face-silhouette-neutral-v27/,'V28 must not retain the V27 paper-thin face implementation');
-assert.doesNotMatch(gameSource,/profileGeometry='stock-only'/,'V28 must not use the V27 stock-only profile marker');
-assert.doesNotMatch(gameSource,/new THREE\.BoxGeometry\(\.043,\.002,\.014\)/,'V28 must not retain V27 paper-thin eye boxes');
-assert.doesNotMatch(gameSource,/king-trimmed-beard-v27/,'V28 must not retain the V27 beard marker');
-assert.doesNotMatch(gameSource,/king-hair-top-v27/,'V28 must not retain V27 top hair');
-assert.doesNotMatch(gameSource,/king-hair-back-v27/,'V28 must not retain V27 rear hair');
+assert.doesNotMatch(gameSource,/makeMasculineKingFace\(/,'V29 must not construct any custom king face/head');
+assert.doesNotMatch(gameSource,/king-head-coherent-v28/,'V29 must remove the rejected V28 replacement head');
+assert.doesNotMatch(gameSource,/king-skull-v28/,'V29 must remove the V28 custom skull');
+assert.doesNotMatch(gameSource,/king-nose-v28/,'V29 must remove the V28 custom nose');
+assert.doesNotMatch(gameSource,/king-beard-v28/,'V29 must remove the V28 custom beard');
+assert.doesNotMatch(gameSource,/king-hair-top-v28/,'V29 must remove the V28 custom hair');
+assert.doesNotMatch(gameSource,/king-face-silhouette-neutral-v27/,'V29 must not restore the rejected V27 overlay face');
+assert.doesNotMatch(gameSource,/profileSource=/,'V29 must not retain custom face-profile metadata');
