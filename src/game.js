@@ -193,16 +193,19 @@ function makeMasculineKingFace(){
     ear.scale.set(.55,.48,1);ear.position.set(x,-.002,.095);g.add(ear)
   }
 
-  // Short dark-brown hair under the crown, matching the generated reference.
-  const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.158,10,6,0,Math.PI*2,0,Math.PI*.50),hair);
-  hairCap.name='king-hair-cap';hairCap.scale.set(.96,.82,.45);hairCap.position.set(0,-.004,.205);g.add(hairCap);
-  for(const x of [-.070,-.023,.023,.070]){
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.045,.022,.036),hair);
-    fringe.position.set(x,-.133,.187+(Math.abs(x)<.03?.008:0));fringe.rotation.z=x*.8;g.add(fringe)
-  }
+  // Short fitted dark-brown hair under the crown. Use shallow panels instead
+  // of a spherical cap so side/back views never produce a brown shoulder-sized bulge.
+  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.242,.150,.034),hair);
+  hairTop.name='king-hair-top';hairTop.position.set(0,.004,.226);g.add(hairTop);
+  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.236,.026,.086),hair);
+  hairBack.name='king-hair-back';hairBack.position.set(0,.112,.170);g.add(hairBack);
   for(const x of [-.132,.132]){
-    const temple=new THREE.Mesh(new THREE.BoxGeometry(.026,.020,.082),hair);
-    temple.position.set(x,-.105,.146);temple.rotation.y=x<0?-.07:.07;g.add(temple)
+    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.026,.105,.082),hair);
+    sideHair.position.set(x,.018,.166);sideHair.rotation.z=x<0?-.035:.035;g.add(sideHair)
+  }
+  for(const x of [-.070,-.023,.023,.070]){
+    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.043,.020,.030),hair);
+    fringe.position.set(x,-.125,.191+(Math.abs(x)<.03?.007:0));fringe.rotation.z=x*.7;g.add(fringe)
   }
 
   // Slightly square lower face.
@@ -756,7 +759,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v23-reference-face',
+    version:'v24-fitted-hair',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

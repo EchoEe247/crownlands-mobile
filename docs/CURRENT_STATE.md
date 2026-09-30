@@ -1,4 +1,4 @@
-# Current State — V23 Living World
+# Current State — V24 Living World
 
 Date: 2026-09-29
 
@@ -168,3 +168,10 @@ Body scale, crown placement, regalia, camera distances and HUD layout remain unc
 The V22 phone screenshot showed the facial overlay was still too weak at gameplay scale. V23 explicitly follows the stronger first generated Blender-style king reference: short dark-brown hair under the crown, thick stern brows, larger readable blue-gray eyes, a straight angular nose, firm mouth, broad square jaw, and a full trimmed brown beard with sideburns and moustache.
 
 Only the head/face treatment changes. The corrected body scale, crown placement, regalia, camera distances and mobile HUD remain unchanged.
+
+
+## V24 fitted hair correction
+
+The V23 side/back phone screenshots exposed an obvious geometry defect: the spherical brown hair cap projected far behind the skull and read as a large brown ball over the shoulder/back. V24 removes that sphere completely.
+
+Hair is now built from shallow fitted low-poly top, rear, side, and fringe panels that hug the measured head volume. The V23 custom face, beard, crown, body scale, regalia, cameras, controls, and HUD are otherwise unchanged.

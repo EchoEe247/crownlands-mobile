@@ -55,12 +55,12 @@ assert.match(gameSource,/const noseGeo=new THREE\.BufferGeometry\(\)/,'face must
 assert.match(gameSource,/const mouth=new THREE\.Mesh/,'face must include a modeled mouth');
 assert.match(gameSource,/king-square-chin/,'face must include integrated square jaw/chin structure');
 
-assert.match(gameSource,/Short dark-brown hair under the crown/,'face must include reference-inspired short hair');
+assert.match(gameSource,/Short fitted dark-brown hair under the crown/,'face must include reference-inspired short fitted hair');
 assert.match(gameSource,/Deep-set readable eyes/,'face must include mobile-readable eyes');
 assert.match(gameSource,/Straight angular nose/,'face must include a defined straight nose');
 assert.match(gameSource,/Full trimmed beard:/,'face must include a full trimmed beard');
 
-assert.match(gameSource,/king-hair-cap/,'reference-inspired king face must include short brown hair');
+assert.match(gameSource,/king-hair-top/,'reference-inspired king face must include fitted short brown hair');
 assert.match(gameSource,/king-trimmed-beard/,'reference-inspired king face must include a full trimmed beard');
 assert.match(gameSource,/color:0x426274/,'reference-inspired face must use readable blue-gray irises');
 assert.ok(KING_FACE.eyeRadius>=.021,'eyes must remain visible at mobile gameplay distance without looking oversized');
@@ -68,4 +68,7 @@ assert.ok(KING_FACE.noseTipY<=-.18,'nose must have a clearly projected masculine
 assert.match(gameSource,/king-head-base/,'reference face must replace the blank stock head with a coherent custom head');
 assert.match(gameSource,/king-square-chin/,'reference face must include a square masculine chin');
 assert.match(gameSource,/king-straight-nose/,'reference face must include a defined straight nose');
-assert.match(gameSource,/const temple=new THREE\.Mesh/,'reference-inspired face must include short side hair at the temples');
+assert.match(gameSource,/const sideHair=new THREE\.Mesh/,'reference-inspired face must include fitted short side hair');
+
+assert.doesNotMatch(gameSource,/hairCap=new THREE\.Mesh\(new THREE\.SphereGeometry/,'king hair must not regress to the oversized spherical hair cap seen in side/back mobile screenshots');
+assert.match(gameSource,/king-hair-back/,'king must have a shallow fitted rear hair panel');
