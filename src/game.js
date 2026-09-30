@@ -174,8 +174,8 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeMasculineKingFace(){
-  const g=new THREE.Group();g.name='king-face-reference-v23';g.userData.isKingFace=true;
-  const skin=new THREE.MeshStandardMaterial({color:0xc18b63,roughness:.72,metalness:0});
+  const g=new THREE.Group();g.name='king-face-profile-v25';g.userData.isKingFace=true;
+  const skin=new THREE.MeshStandardMaterial({color:0xc18b63,roughness:.72,metalness:0,flatShading:true});
   const skinShadow=new THREE.MeshStandardMaterial({color:0x936047,roughness:.84,metalness:0});
   const eyeWhite=new THREE.MeshStandardMaterial({color:0xf2eadb,roughness:.58,metalness:0});
   const iris=new THREE.MeshStandardMaterial({color:0x426274,roughness:.42,metalness:0});
@@ -184,81 +184,105 @@ function makeMasculineKingFace(){
   const beard=new THREE.MeshStandardMaterial({color:0x3a2419,roughness:.94,metalness:0});
   const lip=new THREE.MeshStandardMaterial({color:0x5a2c29,roughness:.84,metalness:0});
 
-  // Replace the blank stock head mesh with one coherent low-poly king head.
-  // Dimensions are taken from the original guard head bounds (~0.303 x 0.255 x 0.325).
-  const headBase=new THREE.Mesh(new THREE.SphereGeometry(.16,10,7),skin);
-  headBase.name='king-head-base';headBase.scale.set(.94,.80,1.02);headBase.position.set(0,-.002,.098);headBase.castShadow=true;g.add(headBase);
-  for(const x of [-.158,.158]){
-    const ear=new THREE.Mesh(new THREE.SphereGeometry(.032,8,6),skinShadow);
-    ear.scale.set(.55,.48,1);ear.position.set(x,-.002,.095);g.add(ear)
-  }
-
-  // Short fitted dark-brown hair under the crown. Use shallow panels instead
-  // of a spherical cap so side/back views never produce a brown shoulder-sized bulge.
-  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.242,.150,.034),hair);
-  hairTop.name='king-hair-top';hairTop.position.set(0,.004,.226);g.add(hairTop);
-  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.236,.026,.086),hair);
-  hairBack.name='king-hair-back';hairBack.position.set(0,.112,.170);g.add(hairBack);
-  for(const x of [-.132,.132]){
-    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.026,.105,.082),hair);
-    sideHair.position.set(x,.018,.166);sideHair.rotation.z=x<0?-.035:.035;g.add(sideHair)
-  }
-  for(const x of [-.070,-.023,.023,.070]){
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.043,.020,.030),hair);
-    fringe.position.set(x,-.125,.191+(Math.abs(x)<.03?.007:0));fringe.rotation.z=x*.7;g.add(fringe)
-  }
-
-  // Slightly square lower face.
-  const chin=new THREE.Mesh(new THREE.BoxGeometry(.165,.030,.070),skin);
-  chin.name='king-square-chin';chin.position.set(0,-.118,-.020);chin.castShadow=true;g.add(chin);
-
-  // Deep-set readable eyes.
-  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const socket=new THREE.Mesh(new THREE.BoxGeometry(.067,.012,.037),skinShadow);
-    socket.position.set(x,-.132,KING_FACE.eyeZ);g.add(socket);
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,12,8),eyeWhite);
-    eye.scale.set(1.22,.34,.58);eye.position.set(x,-.145,KING_FACE.eyeZ);g.add(eye);
-    const ir=new THREE.Mesh(new THREE.SphereGeometry(.014,10,7),iris);
-    ir.scale.set(.92,.24,1);ir.position.set(x,-.160,KING_FACE.eyeZ);g.add(ir);
-    const pu=new THREE.Mesh(new THREE.SphereGeometry(.007,8,6),pupil);
-    pu.scale.set(.92,.20,1);pu.position.set(x,-.167,KING_FACE.eyeZ);g.add(pu)
-  }
-
-  // Thick stern brows.
-  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.014,.021),hair);
-    brow.position.set(x,-.148,KING_FACE.browZ);brow.rotation.y=x<0?-.22:.22;g.add(brow)
-  }
-
-  // Straight angular nose.
-  const noseGeo=new THREE.BufferGeometry();
-  const v=[
-    -.022,-.140,.160, .022,-.140,.160,
-    -.031,-.145,.073, .031,-.145,.073,
-     0,KING_FACE.noseTipY,.060,
-    -.021,-.149,.031, .021,-.149,.031
+  // One coherent faceted head shell. Each vertical level has a deliberate
+  // front/back profile so the side silhouette is forehead -> nose -> lips -> chin,
+  // instead of a sphere plus a protruding chin block.
+  const levels=[
+    {z:-.084,w:.082,front:-.118,back:.074},
+    {z:-.050,w:.112,front:KING_FACE.headFrontChinY,back:.103},
+    {z:.010,w:.120,front:KING_FACE.headFrontMouthY,back:KING_FACE.headBackY},
+    {z:.075,w:.126,front:-.135,back:.122},
+    {z:.142,w:.124,front:KING_FACE.headFrontForeheadY,back:.118},
+    {z:.205,w:.110,front:-.108,back:.103},
+    {z:KING_FACE.headTopZ,w:.078,front:-.070,back:.072},
   ];
-  const nf=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
-  noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));noseGeo.setIndex(nf);noseGeo.computeVertexNormals();
-  const nose=new THREE.Mesh(noseGeo,skin);nose.name='king-straight-nose';nose.castShadow=true;g.add(nose);
-
-  // Full trimmed beard: side panels + chin + moustache, leaving cheeks/eyes clear.
-  for(const x of [-.110,.110]){
-    const side=new THREE.Mesh(new THREE.BoxGeometry(.038,.015,.128),beard);
-    side.position.set(x,-.141,.010);side.rotation.y=x<0?-.07:.07;g.add(side)
+  const ringSegments=8,hv=[];
+  for(const L of levels){
+    for(let i=0;i<ringSegments;i++){
+      const a=i/ringSegments*Math.PI*2,c=Math.cos(a),sn=Math.sin(a);
+      const y=c>=0?L.front*c:L.back*(-c);
+      hv.push(L.w*sn,y,L.z)
+    }
   }
-  const beardChin=new THREE.Mesh(new THREE.BoxGeometry(.185,.016,.060),beard);
-  beardChin.name='king-trimmed-beard';beardChin.position.set(0,-.145,-.052);g.add(beardChin);
-  for(const x of [-.024,.024]){
-    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.048,.013,.015),beard);
-    moustache.position.set(x,-.158,.039);moustache.rotation.y=x<0?-.12:.12;g.add(moustache)
+  const hi=[];
+  for(let r=0;r<levels.length-1;r++){
+    const a=r*ringSegments,b=(r+1)*ringSegments;
+    for(let i=0;i<ringSegments;i++){
+      const j=(i+1)%ringSegments;
+      hi.push(a+i,b+i,a+j, a+j,b+i,b+j)
+    }
+  }
+  for(let i=1;i<ringSegments-1;i++)hi.push(0,i+1,i);
+  const top=(levels.length-1)*ringSegments;
+  for(let i=1;i<ringSegments-1;i++)hi.push(top,top+i,top+i+1);
+  const headGeo=new THREE.BufferGeometry();
+  headGeo.setAttribute('position',new THREE.Float32BufferAttribute(hv,3));headGeo.setIndex(hi);headGeo.computeVertexNormals();
+  const headBase=new THREE.Mesh(headGeo,skin);headBase.name='king-head-profile-shell';headBase.castShadow=true;g.add(headBase);
+
+  // Small ears that sit inside the skull depth rather than sticking out behind it.
+  for(const x of [-.137,.137]){
+    const ear=new THREE.Mesh(new THREE.SphereGeometry(.026,7,5),skinShadow);
+    ear.scale.set(.50,.42,1);ear.position.set(x,.000,.090);g.add(ear)
   }
 
-  // Firm mouth, visible between moustache and beard.
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.086,.012,.012),lip);
-  mouth.position.set(0,-.163,KING_FACE.mouthZ);g.add(mouth);
-  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.064,.009,.011),skinShadow);
-  lowerLip.position.set(0,-.157,KING_FACE.mouthZ-.020);g.add(lowerLip);
+  // Fitted short hair follows the skull surface and stays entirely above/behind the face.
+  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.206,.118,.018),hair);
+  hairTop.name='king-hair-top';hairTop.position.set(0,.010,.238);g.add(hairTop);
+  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.208,.018,.082),hair);
+  hairBack.name='king-hair-back';hairBack.position.set(0,.108,.183);g.add(hairBack);
+  for(const x of [-.118,.118]){
+    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.016,.084,.070),hair);
+    sideHair.position.set(x,.018,.177);g.add(sideHair)
+  }
+  for(const x of [-.058,-.019,.019,.058]){
+    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.036,.015,.026),hair);
+    fringe.position.set(x,-.104,.203+(Math.abs(x)<.025?.006:0));fringe.rotation.z=x*.55;g.add(fringe)
+  }
+
+  // Deep-set adult eyes and stern brows.
+  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
+    const socket=new THREE.Mesh(new THREE.BoxGeometry(.060,.008,.032),skinShadow);
+    socket.position.set(x,-.126,KING_FACE.eyeZ);g.add(socket);
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,10,7),eyeWhite);
+    eye.scale.set(1.18,.28,.56);eye.position.set(x,-.136,KING_FACE.eyeZ);g.add(eye);
+    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0115,8,6),iris);
+    ir.scale.set(.90,.20,1);ir.position.set(x,-.148,KING_FACE.eyeZ);g.add(ir);
+    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0058,7,5),pupil);
+    pu.scale.set(.90,.18,1);pu.position.set(x,-.154,KING_FACE.eyeZ);g.add(pu);
+
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.010,.018),hair);
+    brow.position.set(x,-.137,KING_FACE.browZ);brow.rotation.y=x<0?-.18:.18;g.add(brow)
+  }
+
+  // Compact straight nose: only the nose projects, not the entire facial mass.
+  const noseGeo=new THREE.BufferGeometry();
+  const nv=[
+    -.019,-.127,.157, .019,-.127,.157,
+    -.026,-.134,.078, .026,-.134,.078,
+     0,KING_FACE.noseTipY,.061,
+    -.017,-.137,.038, .017,-.137,.038
+  ];
+  const ni=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
+  noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(nv,3));noseGeo.setIndex(ni);noseGeo.computeVertexNormals();
+  const nose=new THREE.Mesh(noseGeo,skin);nose.name='king-profile-nose';nose.castShadow=true;g.add(nose);
+
+  // Trimmed beard follows the jaw plane. It is shallow in Y so it cannot deform profile.
+  for(const x of [-.099,.099]){
+    const side=new THREE.Mesh(new THREE.BoxGeometry(.030,.009,.112),beard);
+    side.position.set(x,-.143,.004);g.add(side)
+  }
+  const beardChin=new THREE.Mesh(new THREE.BoxGeometry(.164,.010,.056),beard);
+  beardChin.name='king-trimmed-beard';beardChin.position.set(0,-.145,-.047);g.add(beardChin);
+  for(const x of [-.021,.021]){
+    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.042,.008,.012),beard);
+    moustache.position.set(x,-.151,.034);moustache.rotation.y=x<0?-.10:.10;g.add(moustache)
+  }
+
+  // Firm mouth sits just ahead of the mouth plane, with no separate protruding chin.
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.080,.008,.010),lip);
+  mouth.position.set(0,-.151,KING_FACE.mouthZ);g.add(mouth);
+  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.060,.006,.009),skinShadow);
+  lowerLip.position.set(0,-.147,KING_FACE.mouthZ-.018);g.add(lowerLip);
 
   return g
 }
@@ -759,7 +783,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v24-fitted-hair',
+    version:'v25-clean-profile',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

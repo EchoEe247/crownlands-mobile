@@ -20,22 +20,19 @@ export const KING_REGALIA={
 
 
 export const KING_FACE={
-  frontY:-.132,
-  featureY:-.178,
-  eyeX:.058,
-  eyeZ:.140,
-  eyeRadius:.022,
-  browZ:.190,
-  browWidth:.082,
-  noseTipY:-.188,
-  mouthZ:.006,
-  jawTopZ:.074,
-  jawBottomZ:-.078,
-  jawTopHalfWidth:.116,
-  jawBottomHalfWidth:.120,
-  hairCapZ:.205,
-  beardTopZ:.050,
-  beardBottomZ:-.082,
+  eyeX:.056,
+  eyeZ:.138,
+  eyeRadius:.021,
+  browZ:.184,
+  browWidth:.078,
+  noseTipY:-.176,
+  mouthZ:.000,
+  headTopZ:.252,
+  headBottomZ:-.084,
+  headFrontForeheadY:-.122,
+  headFrontMouthY:-.142,
+  headFrontChinY:-.132,
+  headBackY:.118,
 };
 
 export const KING_CAMERA={

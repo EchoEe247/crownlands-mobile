@@ -12,10 +12,6 @@ assert.ok(KING_REGALIA.capeTopY<=1.45,'cape must begin below the head so the kin
 assert.ok(KING_REGALIA.crownRadius>=.12&&KING_REGALIA.crownRadius<=.14,'crown band must be wide enough to read on the measured guard head');
 assert.ok(KING_REGALIA.crownSpikeHeight>=.10&&KING_REGALIA.crownSpikeHeight<=.12,'crown spikes must be visible without becoming oversized');
 assert.ok(KING_REGALIA.crownHeadOffset>=.27&&KING_REGALIA.crownHeadOffset<=.29,'crown must sit at the measured top of the guard head rather than inside it');
-assert.ok(KING_FACE.frontY<=-.125&&KING_FACE.frontY>=-.14,'king face must sit just outside the measured front of the head');
-assert.ok(KING_FACE.eyeX>=.05&&KING_FACE.eyeX<=.065,'eyes must have adult masculine spacing on the measured head width');
-assert.ok(KING_FACE.jawBottomHalfWidth>=.10&&KING_FACE.jawBottomHalfWidth<=.12,'lower jaw must be broad but remain inside the measured head width');
-assert.ok((KING_FACE.frontY-KING_FACE.noseTipY)>=.045&&(KING_FACE.frontY-KING_FACE.noseTipY)<=.065,'nose must project clearly without becoming exaggerated');
 assert.ok(KING_CAMERA.fov>=64&&KING_CAMERA.fov<=70,'camera FOV must retain useful environment context');
 assert.equal(KING_CAMERA.defaultMode,'third','mobile gameplay must start in third person');
 assert.ok(KING_CAMERA.third.standingDistance>=3.7&&KING_CAMERA.third.standingDistance<=4.1,'third-person camera should be close enough for mobile character readability');
@@ -49,26 +45,28 @@ assert.doesNotMatch(gameSource,/new THREE\.SphereGeometry\(KING_REGALIA\.pauldro
 assert.doesNotMatch(gameSource,/new THREE\.CylinderGeometry\(\.016,\.020,\.38/,'king must not add a detached procedural scabbard');
 
 assert.match(gameSource,/makeMasculineKingFace\(\)/,'runtime must construct the detailed king face');
-assert.match(gameSource,/g\.name='king-face-reference-v23'/,'face group must have an explicit runtime identity');
-assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,12,8\)/,'face must include modeled readable eyes');
+assert.match(gameSource,/g\.name='king-face-profile-v25'/,'face group must have an explicit runtime identity');
+assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,10,7\)/,'face must include modeled readable eyes');
 assert.match(gameSource,/const noseGeo=new THREE\.BufferGeometry\(\)/,'face must include a modeled nose');
 assert.match(gameSource,/const mouth=new THREE\.Mesh/,'face must include a modeled mouth');
-assert.match(gameSource,/king-square-chin/,'face must include integrated square jaw/chin structure');
 
-assert.match(gameSource,/Short fitted dark-brown hair under the crown/,'face must include reference-inspired short fitted hair');
-assert.match(gameSource,/Deep-set readable eyes/,'face must include mobile-readable eyes');
-assert.match(gameSource,/Straight angular nose/,'face must include a defined straight nose');
-assert.match(gameSource,/Full trimmed beard:/,'face must include a full trimmed beard');
+assert.match(gameSource,/Fitted short hair follows the skull surface/,'face must include reference-inspired short fitted hair');
+assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,10,7\)/,'face must include mobile-readable eyes');
+assert.match(gameSource,/king-profile-nose/,'face must include a defined straight nose');
+assert.match(gameSource,/king-trimmed-beard/,'face must include a full trimmed beard');
 
 assert.match(gameSource,/king-hair-top/,'reference-inspired king face must include fitted short brown hair');
 assert.match(gameSource,/king-trimmed-beard/,'reference-inspired king face must include a full trimmed beard');
 assert.match(gameSource,/color:0x426274/,'reference-inspired face must use readable blue-gray irises');
 assert.ok(KING_FACE.eyeRadius>=.021,'eyes must remain visible at mobile gameplay distance without looking oversized');
-assert.ok(KING_FACE.noseTipY<=-.18,'nose must have a clearly projected masculine profile');
-assert.match(gameSource,/king-head-base/,'reference face must replace the blank stock head with a coherent custom head');
-assert.match(gameSource,/king-square-chin/,'reference face must include a square masculine chin');
-assert.match(gameSource,/king-straight-nose/,'reference face must include a defined straight nose');
+assert.ok(KING_FACE.headFrontForeheadY>KING_FACE.headFrontMouthY,'forehead must sit behind the mouth plane in side profile');
+assert.ok(KING_FACE.noseTipY<KING_FACE.headFrontMouthY-.025,'only the nose should project substantially beyond the facial plane');
+assert.ok(KING_FACE.headFrontChinY>KING_FACE.headFrontMouthY,'chin must recede slightly behind the lips for a natural side profile');
+assert.match(gameSource,/king-head-profile-shell/,'king must use a coherent profile-controlled custom head shell');
+assert.doesNotMatch(gameSource,/king-square-chin/,'side profile must not use a separate protruding chin block');
+assert.match(gameSource,/king-profile-nose/,'king must include a compact profile-controlled nose');
 assert.match(gameSource,/const sideHair=new THREE\.Mesh/,'reference-inspired face must include fitted short side hair');
 
 assert.doesNotMatch(gameSource,/hairCap=new THREE\.Mesh\(new THREE\.SphereGeometry/,'king hair must not regress to the oversized spherical hair cap seen in side/back mobile screenshots');
 assert.match(gameSource,/king-hair-back/,'king must have a shallow fitted rear hair panel');
+assert.match(gameSource,/const ringSegments=8/,'head shell must use rounded low-poly cross-section rings rather than a flat box profile');

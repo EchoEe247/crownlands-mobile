@@ -1,4 +1,4 @@
-# Current State — V24 Living World
+# Current State — V25 Living World
 
 Date: 2026-09-29
 
@@ -175,3 +175,10 @@ Only the head/face treatment changes. The corrected body scale, crown placement,
 The V23 side/back phone screenshots exposed an obvious geometry defect: the spherical brown hair cap projected far behind the skull and read as a large brown ball over the shoulder/back. V24 removes that sphere completely.
 
 Hair is now built from shallow fitted low-poly top, rear, side, and fringe panels that hug the measured head volume. The V23 custom face, beard, crown, body scale, regalia, cameras, controls, and HUD are otherwise unchanged.
+
+
+## V25 clean side-profile rebuild
+
+The V24 phone side screenshot exposed that the custom head still behaved like separate stacked primitives: an ellipsoid skull, an added chin box, and projected facial parts. From the side this created an unnatural lumped profile.
+
+V25 replaces that construction with one coherent faceted head shell whose front/back contour is explicitly authored at seven vertical levels. The forehead, eye plane, mouth plane and chin now form a controlled human silhouette; only the compact nose projects beyond the facial mass. The separate chin block is removed, beard pieces are made shallow, ears are reduced, and the fitted hair is retained. Crown, body scale, regalia, mobile cameras, controls and HUD are unchanged.
