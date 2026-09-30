@@ -23,9 +23,16 @@
 
 ## Next quality milestones
 
+### Immediate blocker — king head/profile
+- V25 side-profile rebuild is **rejected on Pixel**; the actual side view remains deformed
+- stop claiming the face/head is fixed based on Blender-only QA
+- rebuild or replace the head as one coherent modeled/rigged asset or deliberately authored mesh
+- validate front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
+- preserve the already-correct body scale, crown, camera modes, regalia and mobile controls while replacing the head
+
 ### Real-device polish
 - tune throne sitting on Pixel screenshot evidence
-- inspect king/cape/crown while walking
+- inspect king/cape/crown while walking after the head blocker is resolved
 - profile FPS/memory on Pixel 6a in market and battle
 - tune world asset scale/collision
 - improve mobile HUD density if needed

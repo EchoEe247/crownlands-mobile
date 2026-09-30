@@ -1,6 +1,6 @@
 # Current State — V25 Living World
 
-Date: 2026-09-29
+Date: 2026-09-29 (latest real-device review after V25)
 
 ## Verified implementation
 
@@ -70,18 +70,38 @@ Runtime browser probe reports:
 - 27 Crown military personnel
 - no JavaScript boot exception before the known automation WebGL limitation
 
+## Current acceptance status
+
+**V25 is not visually complete.** Build/test/runtime checks pass, but the latest Pixel Android Chrome side-view screenshot still shows the playable king's head/face as deformed. That real-device evidence overrides the cleaner headless Blender renders used during the V25 implementation.
+
+What is accepted from the recent presentation work:
+- king world scale is in the intended NPC family range (1.80 m vs 1.72 m baseline)
+- third-person/first-person mobile camera framework exists
+- crown is present and head-attached
+- the V23 oversized spherical hair bulge was removed
+- the player remains embodied and mobile controls continue to function
+
+What is **not** accepted:
+- final head mesh
+- side facial silhouette
+- final facial proportions/readability
+- any claim that V25 solved the king face/profile problem
+
+**Next character task:** replace/re-author the head as a coherent model with front/side/3/4 silhouette validation against Pixel screenshots. Do not continue treating procedural primitive placement plus Blender-only QA as sufficient acceptance.
+
 ## Known limitation
 
 Termux desktop Chromium loses/fails its WebGL context even with SwiftShader/Xvfb. It cannot be used as authoritative visual evidence. Pixel Android Chrome has previously rendered Crownlands correctly and remains the final in-game visual acceptance route.
 
 The next real-device pass should focus on:
-1. king standing/walking/cape
-2. throne pose
-3. frame rate in the expanded castle/market
-4. two-guard escort and shift handoff
-5. travel toward the village/road
-6. one raid
-7. optionally a Blackmere war/campaign
+1. replace/re-author the king head and validate front, exact side, rear and 3/4 silhouettes
+2. only after the head passes, re-check king standing/walking/cape
+3. throne pose
+4. frame rate in the expanded castle/market
+5. two-guard escort and shift handoff
+6. travel toward the village/road
+7. one raid
+8. optionally a Blackmere war/campaign
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
 
@@ -177,8 +197,10 @@ The V23 side/back phone screenshots exposed an obvious geometry defect: the sphe
 Hair is now built from shallow fitted low-poly top, rear, side, and fringe panels that hug the measured head volume. The V23 custom face, beard, crown, body scale, regalia, cameras, controls, and HUD are otherwise unchanged.
 
 
-## V25 clean side-profile rebuild
+## V25 side-profile rebuild — rejected on Pixel
 
 The V24 phone side screenshot exposed that the custom head still behaved like separate stacked primitives: an ellipsoid skull, an added chin box, and projected facial parts. From the side this created an unnatural lumped profile.
 
-V25 replaces that construction with one coherent faceted head shell whose front/back contour is explicitly authored at seven vertical levels. The forehead, eye plane, mouth plane and chin now form a controlled human silhouette; only the compact nose projects beyond the facial mass. The separate chin block is removed, beard pieces are made shallow, ears are reduced, and the fitted hair is retained. Crown, body scale, regalia, mobile cameras, controls and HUD are unchanged.
+V25 attempted to replace that construction with a coherent faceted head shell whose front/back contour is explicitly authored at seven vertical levels. The separate chin block was removed, beard pieces were made shallow, ears were reduced, and fitted hair was retained. Automated tests and headless Blender front/side/3/4 renders passed.
+
+**Real-device result:** the subsequent Pixel side-view screenshot still showed a deformed face/head profile. Therefore V25 is a rejected visual iteration, not a completed fix. The crown, body scale, regalia, mobile cameras, controls and HUD remain usable, but the head itself requires another approach.

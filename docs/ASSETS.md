@@ -12,8 +12,16 @@ Crownlands prefers assets that are clearly reusable and redistributable. The cur
 | `assets/innkeeper.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / Innkeeper | CC0 1.0 | steward / civilian NPC |
 | `assets/mage.glb` | 3DAssets.dev — Fantasy MMO City and Townsfolk / City Mage | CC0 1.0 | chancellor / court NPC |
 | `assets/king-knight.glb` | Quaternius Animated Knight Pack, GLB obtained through `ilrein/warptracker` | CC0 | legacy king prototype retained for provenance/reference; not the V14 player body |
-| `assets/castle/*.glb` | Kenney Castle Kit, mirrored through `Hidencod/tge-assets` | CC0 | gates, towers, walls, bridge, siege props, trees, rocks |\n| `assets/town/*` | Kenney Fantasy Town Kit 2.0 | CC0 | market stalls, cart, lanterns, fountains, mills and trees |\n| `assets/town/Textures/colormap.png` | Kenney Fantasy Town Kit 2.0 GLB texture | CC0 | shared town palette texture |
+| `assets/castle/*.glb` | Kenney Castle Kit, mirrored through `Hidencod/tge-assets` | CC0 | gates, towers, walls, bridge, siege props, trees, rocks |
+| `assets/town/*` | Kenney Fantasy Town Kit 2.0 | CC0 | market stalls, cart, lanterns, fountains, mills and trees |
+| `assets/town/Textures/colormap.png` | Kenney Fantasy Town Kit 2.0 GLB texture | CC0 | shared town palette texture |
 | `vendor/three.module.js` and `vendor/addons/*` | Three.js r160 | MIT | renderer/loaders/runtime |
+
+## Current player-character asset status
+
+The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia and a custom runtime head treatment. The legacy Quaternius `king-knight.glb` is not the current player body.
+
+As of V25, the runtime-created king head is **not visually accepted**: the latest Pixel side-view screenshot still shows a deformed profile. This is a modeling/rendering issue, not an asset-license issue. A future replacement head should be original or clearly redistributable and must be added here if it introduces a new external asset.
 
 ## Source links
 

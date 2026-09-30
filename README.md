@@ -4,9 +4,11 @@
 
 Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-## V10 living-world build
+## Current V25 build
 
-The current playable build has moved beyond the original courtyard prototype.
+The current playable build combines the V10 living-world/simulation foundation with the mobile presentation and king-character work through V25.
+
+**Important current visual status:** V25 is mechanically/build verified, but the playable king's head is **not visually accepted**. The latest real Pixel side-view screenshot still shows a deformed facial/head profile. Blender/headless renders are useful modeling checks, but they did not reproduce the final Android Chrome result closely enough to close this issue.
 
 - embodied third-person king with touch movement/camera
 - throne sit/stand and court petitions
@@ -68,6 +70,7 @@ The generated playable bundle is `dist/game.fast.js`.
 ```text
 src/
   game.js                 # game integration / mobile controls / interactions
+  presentation.js         # king scale, regalia, face and camera invariants
   layout.js               # world, buildings, roads, districts, collision
   nav.js                  # navigation graph + A*
   util.js
@@ -82,6 +85,7 @@ src/
   render/
     world.js              # expanded procedural world geometry
     living.js             # bounded mobile actor render pool
+    characterBounds.js    # body-only character fitting / held-item exclusion
 assets/
   castle/
   town/
@@ -110,6 +114,8 @@ See `AGENTS.md`, `docs/VISION.md`, and `docs/NPC_SIMULATION.md` before making ma
 Automated tests currently cover navigation, actor scheduling/order interruption, economy, guard shifts, save/resume, diplomacy and the Blackmere campaign path. The local URL and bundled runtime boot are verified.
 
 The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
+
+**Open visual blocker:** the V25 king head/face is still deformed from the side in the actual Pixel renderer. Do not describe V25 as a completed face/profile fix, and do not use Blender-only renders as final acceptance for character appearance. The next character pass should start from the Pixel screenshot evidence and should prefer a coherent modeled/rigged head asset or a deliberately authored mesh over further stacks of runtime primitives.
 
 ## Assets and licensing
 

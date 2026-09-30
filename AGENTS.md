@@ -21,7 +21,7 @@ The actual game target is Android / Pixel 6a class hardware.
 Current play path:
 
 - Termux hosts the static files locally.
-- Android Chrome opens `http://127.0.0.1:5205/`.
+- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=25` (advance the query value whenever the served bundle version changes).
 - Ubuntu/proot may be used for Blender/tooling, but it is not the runtime.
 - AWS or another remote VM is not part of the game dependency graph.
 
@@ -145,6 +145,18 @@ Use:
 - Pixel screenshots/play for in-game rendering
 - Blender headless renders for model/pose QA
 - browser automation for DOM/non-WebGL behavior
+
+### Current visual blocker
+
+The V25 king head is **not accepted**. The latest Pixel side-view screenshot still shows a deformed profile even though the headless Blender QA looked cleaner.
+
+For king/player visual work:
+
+- Pixel Android Chrome is the acceptance authority for front, side, rear and 3/4 silhouettes.
+- Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
+- Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
+- Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
+- For the next head revision, prefer one coherent modeled/rigged head or authored mesh. Avoid accumulating independent face/chin/hair primitives that can produce renderer-dependent silhouette problems.
 
 ## Primary-display safety
 

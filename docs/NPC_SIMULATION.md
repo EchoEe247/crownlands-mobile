@@ -4,6 +4,10 @@ This document defines the most important simulation rule in Crownlands:
 
 > **NPCs have their own lives. Orders interrupt or redirect those lives; they do not create the lives.**
 
+## Current implementation snapshot
+
+The current build already has 113 persistent actors, autonomous civilian schedules, 18 Royal Guards across three rotating shifts, officer/army roles, royal-order interruption/resume, a near/far simulation model, and save/resume for actors and active orders. The sections below remain the design contract for extending that foundation; items described with "should" or "eventually" are not necessarily fully implemented yet.
+
 ## Actor model
 
 Every persistent NPC should eventually have:

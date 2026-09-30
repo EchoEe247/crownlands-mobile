@@ -33,14 +33,17 @@ No AWS VM is required or assumed.
 Current runtime:
 
 - static HTML entry
-- Three.js scene
-- GLB assets loaded progressively
-- source in `src/game.js`
+- Three.js scene with progressively loaded GLB assets
+- `src/game.js` as the main integration/control layer
+- simulation split across `src/sim/core.js`, `actors.js`, `schedules.js`, `military.js`, `economy.js`, `population.js`, and `strategy.js`
+- world/navigation split across `src/layout.js` and `src/nav.js`
+- rendering support split into `src/render/world.js`, `living.js`, and `characterBounds.js`
+- presentation constants in `src/presentation.js`
 - minified bundle in `dist/game.fast.js`
 - persistent lightweight realm state in browser localStorage
 - no required backend
 
-This architecture is intentionally simple while the game design is still moving quickly.
+The architecture is already partially modularized. `src/game.js` remains the largest integration surface and should only be split further when that reduces concrete risk.
 
 ## Mobile performance rules
 
@@ -50,7 +53,7 @@ Current choices:
 - progressive loading
 - one bundled JS runtime
 - low-poly/reusable geometry
-- distance/future simulation LOD expected
+- implemented near/far simulation LOD with a bounded nearby render pool
 - avoid expensive per-frame allocations where possible
 
 Targets for later formal profiling:
@@ -115,22 +118,25 @@ Use:
 2. Blender renders for character/pose/model QA
 3. automated browser checks for DOM/load/runtime state where WebGL is not required
 
+Current caution: V25 demonstrated that a clean Blender head render can still disagree with the final Pixel side silhouette. For player-character appearance, Blender is preflight only; a fresh real-device screenshot is required before a visual defect can be closed.
+
+Current unresolved rendering/modeling defect:
+- V25 king head/face side profile remains deformed on Pixel Android Chrome
+- runtime/build tests passing does not imply character-visual acceptance
+- next implementation should reduce procedural overlay complexity and use a coherent head mesh/model validated on-device
+
 ## Android automation safety
 
 When an automation environment is available, do not hijack the user's primary phone display for test input. Prefer an isolated secondary/virtual display for automated interaction. Manual Pixel Chrome play remains valid acceptance evidence.
 
-## Future architecture direction
+## Architecture direction
 
-As systems grow, split the current monolithic source into modules:
+The simulation, world, navigation and rendering layers are already separated from the main integration file. Future extraction should target only areas where `src/game.js` still mixes too many responsibilities, especially:
 
-- `core/` state/event/save
-- `world/` districts/time/weather
-- `actors/` NPCs/needs/schedules
-- `orders/` royal job system
-- `military/` guard/army/officers/combat
-- `economy/` production/trade/treasury
-- `politics/` nobles/diplomacy/factions
-- `ui/` mobile HUD/dialogue/orders
-- `render/` Three.js scene/assets/effects
+- save/state glue that remains outside `src/sim/core.js`
+- royal-order UI and interaction routing
+- combat/input presentation
+- mobile HUD/dialogue/order UI
+- player-character presentation/model assembly
 
 Do the split when it reduces risk; do not rewrite working systems merely for aesthetics.
