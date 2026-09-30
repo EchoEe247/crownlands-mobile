@@ -4,11 +4,11 @@
 
 Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-## Current V27 face fix
+## Current build — V27 / face unresolved
 
-The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability work and the V27 king-face correction.
+The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability work and the V27 king-face attempt.
 
-**Important current visual status:** V27 fixes a concrete geometry error in the prior face overlays. The actual `head.001` lower-face surface is around Y −0.058 to −0.071, while older mouth/beard overlays were near Y −0.14, projecting the lower face roughly 7–8 cm too far forward in model space. V27 keeps `head.001` as the full silhouette, removes custom nose/jaw/chin geometry, and places paper-thin identity features against measured surface depths. Geometry QA now limits custom forward extension to under 3 mm. Fresh Pixel front/side/3/4 acceptance is still required.
+**Important current visual status:** the king face/head profile is still unresolved on the actual Pixel renderer. V27 corrected a real lower-face depth error and passed geometry/build checks, but the user still rejected the resulting face. GPT-5.6 Sol made multiple follow-up attempts, including V26 and V27, and did not achieve an acceptable Pixel face/profile. Do **not** describe V27 as a face fix or accepted candidate. Face work is paused; if this is revisited later, prefer replacing the head with one coherent authored/rigged asset rather than continuing the procedural-overlay approach.
 
 - embodied third-person king with touch movement/camera
 - throne sit/stand and court petitions
@@ -71,6 +71,7 @@ The generated playable bundle is `dist/game.fast.js`.
 src/
   game.js                 # game integration / mobile controls / interactions
   presentation.js         # king scale, regalia, face and camera invariants
+  runtime.js              # DOM-free save / fast-forward helpers
   layout.js               # world, buildings, roads, districts, collision
   nav.js                  # navigation graph + A*
   util.js
@@ -94,6 +95,7 @@ tests/
   living_world.mjs
   save_resume.mjs
   war_campaign.mjs
+  audit_regressions.mjs
 docs/
 ```
 
@@ -111,14 +113,14 @@ See `AGENTS.md`, `docs/VISION.md`, and `docs/NPC_SIMULATION.md` before making ma
 
 ## QA status
 
-Automated tests currently cover navigation, actor scheduling/order interruption, economy, guard shifts, save/resume, diplomacy and the Blackmere campaign path. The local URL and bundled runtime boot are verified.
+Automated tests currently cover navigation, actor scheduling/order interruption, economy, guard shifts, save/resume, diplomacy, the Blackmere campaign path, and the V26 audit regressions. The local URL and bundled runtime boot are verified.
 
 The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
 
-**Visual acceptance:** V27 is the current face fix. It corrects the measured lower-face depth error and removes custom side-profile facial mass. Do not call it visually accepted until a fresh Pixel Chrome screenshot confirms front, exact side and 3/4 silhouettes.
+**Unresolved visual blocker:** V27 was rejected on Pixel. GPT-5.6 Sol attempted the face/profile multiple times and could not produce an acceptable result. The playable build remains mechanically usable, but the king face is a known unresolved defect and face iteration is paused.
 
 ## Assets and licensing
 
-Current third-party game assets are redistributable public assets, primarily CC0, plus MIT Three.js runtime code. See `docs/ASSETS.md` for provenance.
+Current asset provenance records identify the main third-party game assets as CC0 and the Three.js runtime as MIT. The repo still does not mirror every upstream license text, so the licensing package is not yet complete. See `docs/ASSETS.md` for provenance.
 
 The repository itself does not currently declare a project-level software license; public visibility does not automatically grant reuse rights to the project code.

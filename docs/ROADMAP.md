@@ -23,17 +23,17 @@
 
 ## Next quality milestones
 
-### Immediate blocker — king head/profile
-- V25 side-profile rebuild is **rejected on Pixel**; its custom procedural skull remains historical only
-- V27 keeps the coherent City Guard `head.001` skin mesh as the complete silhouette and removes custom nose/jaw/chin geometry
-- V27 corrects the measured lower-face depth bug: previous mouth/beard overlays sat roughly 7–8 cm too far forward; current overlays are constrained to <3 mm beyond the measured stock surface
-- validate V27 front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
-- if V27 still deforms on-device, move to a single replacement modeled/rigged head asset rather than another procedural skull pass
+### Paused unresolved blocker — king head/profile
+- V25 and V27 are both **rejected on Pixel**
+- GPT-5.6 Sol made multiple face/profile attempts and did not achieve an acceptable real-device result
+- V27 corrected a real lower-face depth bug and constrained overlays to <3 mm beyond the measured stock surface, but that still did not solve the user's visual complaint
+- no further procedural-overlay face iteration is planned in the current work state
+- if the face is revisited later, replace it with one coherent modeled/rigged head asset and judge it on Pixel first
 - preserve the already-correct body scale, crown, camera modes, regalia and mobile controls
 
 ### Real-device polish
 - tune throne sitting on Pixel screenshot evidence
-- inspect king/cape/crown while walking after the head blocker is resolved
+- inspect king/cape/crown while walking independently of the unresolved face when development resumes
 - profile FPS/memory on Pixel 6a in market and battle
 - tune world asset scale/collision
 - improve mobile HUD density if needed

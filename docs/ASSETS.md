@@ -21,7 +21,7 @@ Crownlands prefers assets that are clearly reusable and redistributable. The cur
 
 The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia. V27 reuses that asset's coherent `head.001` skin mesh as the complete head/face silhouette; stock helmet/face/hair pieces are hidden and only paper-thin front identity markings plus in-bounds top/rear hair are layered on top. No new third-party character asset was introduced. The legacy Quaternius `king-knight.glb` is not the current player body.
 
-V25 remains **rejected** by the latest Pixel side-view evidence. V27 is the current pending real-device candidate; if a future replacement head is introduced, it must be original or clearly redistributable and recorded here.
+V25 and V27 are both **rejected** by Pixel face/profile review. GPT-5.6 Sol attempted multiple follow-up face passes and did not achieve an acceptable result. Face work is paused. If a future replacement head is introduced, it must be original or clearly redistributable and recorded here.
 
 ## Source links
 
@@ -59,6 +59,8 @@ Preferred order:
 4. original locally created Blender assets
 
 Do not commit assets with unclear redistribution rights.
+
+The provenance table records the upstream license/status currently documented for each asset, but not every upstream license text is mirrored in this repository yet. Treat that packaging gap as unresolved until the corresponding license files are committed and verified.
 
 If a useful asset is license-restricted, use it only as reference and create/obtain a clean replacement.
 

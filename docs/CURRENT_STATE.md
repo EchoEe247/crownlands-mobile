@@ -1,6 +1,6 @@
-# Current State — V27 Face Fix
+# Current State — V27 / Face Unresolved
 
-Date: 2026-09-29 (V27 face correction; latest real-device visual evidence is still the rejected V25 Pixel side view)
+Date: 2026-09-29 (V27 rejected on Pixel; face work paused)
 
 ## Verified implementation
 
@@ -72,7 +72,7 @@ Runtime browser probe reports:
 
 ## Current acceptance status
 
-**V27 is mechanically/geometrically verified but not yet visually accepted.** V25 remains the latest real-device evidence. During V27 diagnosis, Blender inspection of the actual `head.001` mesh found the concrete side-profile bug: prior mouth/beard overlays were near Y −0.14 even though the authored lower-face surface is only about Y −0.058 to −0.071, producing roughly 7–8 cm of false forward projection. V27 removes custom nose/jaw/chin geometry, keeps `head.001` as the complete silhouette, and places paper-thin identity features against measured surface depths. Profile-bounds QA caps custom extension below 3 mm. A fresh Pixel front/side/3/4 review is still required.
+**The king face/head profile remains unresolved. V27 was rejected on Pixel.** V27 corrected a real geometry error and passed automated/profile-bound checks, but the actual device result still did not meet the user's requirement. GPT-5.6 Sol made multiple follow-up attempts, including V26 and V27, and could not fix the face to an acceptable real-device result. This is now recorded as a known unresolved visual defect rather than a pending acceptance item.
 
 What is accepted from the recent presentation work:
 - king world scale is in the intended NPC family range (1.80 m vs 1.72 m baseline)
@@ -82,31 +82,32 @@ What is accepted from the recent presentation work:
 - the player remains embodied and mobile controls continue to function
 
 What is **not** accepted:
-- V27 front/side/3/4 silhouette acceptance on Pixel
+- king face/head profile on Pixel
 - final facial proportions/readability at gameplay distance
-- any claim that V27 solved the king face/profile problem before fresh real-device evidence
+- V27 as a successful face fix or acceptable baseline
 
-**Next character task:** validate V27 on Pixel Chrome from front, exact side, rear and 3/4. If it still fails, replace the head with one coherent modeled/rigged asset; do not return to custom projecting facial geometry.
+**Face work status:** paused. No further V27/procedural-overlay iteration is planned. If the user explicitly reopens the face later, start from one coherent replacement modeled/rigged head asset and validate on Pixel first rather than continuing to tune the current overlay construction.
 
 ## Known limitation
 
 Termux desktop Chromium loses/fails its WebGL context even with SwiftShader/Xvfb. It cannot be used as authoritative visual evidence. Pixel Android Chrome has previously rendered Crownlands correctly and remains the final in-game visual acceptance route.
 
-The next real-device pass should focus on:
-1. replace/re-author the king head and validate front, exact side, rear and 3/4 silhouettes
-2. only after the head passes, re-check king standing/walking/cape
-3. throne pose
-4. frame rate in the expanded castle/market
-5. two-guard escort and shift handoff
-6. travel toward the village/road
-7. one raid
-8. optionally a Blackmere war/campaign
+When development resumes, real-device work can continue independently of the unresolved face:
+1. re-check king standing/walking/cape without treating face completion as a prerequisite
+2. throne pose
+3. frame rate in the expanded castle/market
+4. two-guard escort and shift handoff
+5. travel toward the village/road
+6. one raid
+7. optionally a Blackmere war/campaign
+
+The face should stay paused unless explicitly reopened.
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
 
-## V27 face correction — measured-surface placement
+## V27 measured-surface attempt — rejected on Pixel
 
-V27 identifies and fixes a concrete geometry error rather than making another cosmetic tweak.
+V27 identified and corrected a concrete geometry error, but the final Pixel result was still rejected. This section is retained as engineering history, not as evidence that the face was fixed.
 
 - actual `head.001` eye-region front surface: about Y −0.1271
 - actual brow-region front surface: about Y −0.1245
@@ -118,9 +119,9 @@ V27 identifies and fixes a concrete geometry error rather than making another co
 - top/rear hair remains inside the authored head bounds
 - `tools/qa/king_profile_bounds.py` verifies maximum custom forward extension below 3 mm with zero rear/side/top extension
 
-**Pixel visual acceptance is still required.**
+**Final status of this attempt:** rejected on Pixel. GPT-5.6 Sol made multiple attempts and did not solve the face/profile issue. Do not continue this procedural-overlay route by default.
 
-## V26 audit/stability pass and stock-head candidate
+## V26 audit/stability pass and stock-head attempt (historical)
 
 V26 incorporates the Sonnet 5.5 audit into executable behavior rather than documentation-only fixes:
 
@@ -138,7 +139,7 @@ V26 incorporates the Sonnet 5.5 audit into executable behavior rather than docum
 
 For the face, V26 abandons the V25 replacement skull. Blender inspection confirmed `head` is an animation transform while `head.001` is the actual approximately 0.303 × 0.254 × 0.324 skin head mesh. V26 leaves `head.001` visible, hides the stock visor/face/hair pieces, and layers shallow royal identity features without redefining the cranial silhouette. This is deliberately a different strategy from V21–V25.
 
-**Visual acceptance remains open until Pixel evidence exists.**
+**Historical outcome:** V26 did not close the face issue; the later V27 attempt was also rejected on Pixel. The face remains unresolved and paused.
 
 ## V11 king visibility hotfix
 

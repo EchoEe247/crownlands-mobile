@@ -146,9 +146,9 @@ Use:
 - Blender headless renders for model/pose QA
 - browser automation for DOM/non-WebGL behavior
 
-### Current visual blocker
+### Current visual blocker — unresolved / paused
 
-V25 is **rejected**: the latest Pixel side-view screenshot showed a deformed procedural profile. V27 preserves the City Guard asset's coherent `head.001` skin mesh as the complete silhouette. Blender mesh inspection found the prior lower-face overlays were roughly 7–8 cm too far forward in model space; V27 places paper-thin features against measured surface depths and adds no custom nose/jaw/chin geometry. V27 remains **unaccepted visually** until a fresh Pixel review passes.
+V27 is **rejected on Pixel**. It corrected a measurable lower-face depth error and passed Blender/profile-bound checks, but the actual device result still did not meet the user's face/profile requirement. GPT-5.6 Sol made multiple attempts, including V26 and V27, and could not fix the face to an acceptable real-device result.
 
 For king/player visual work:
 
@@ -156,7 +156,8 @@ For king/player visual work:
 - Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
 - Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
 - Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
-- Preserve the coherent stock `head.001` silhouette in V27. Keep overlays within the measured <3 mm profile tolerance enforced by `tools/qa/king_profile_bounds.py`. If it still fails on Pixel, replace it with one coherent modeled/rigged head; do not return to a custom procedural skull.
+- Do not continue iterating V27's procedural face-overlay approach unless the user explicitly reopens this work.
+- If face work is reopened, start with one coherent replacement modeled/rigged head and use Pixel-first acceptance. Do not spend another sequence of passes tuning stacked/procedural facial geometry.
 
 ## Primary-display safety
 

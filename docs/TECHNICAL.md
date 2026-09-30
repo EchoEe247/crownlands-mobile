@@ -121,12 +121,13 @@ Use:
 Current caution: V25 demonstrated that a clean Blender head render can still disagree with the final Pixel side silhouette. For player-character appearance, Blender is preflight only; a fresh real-device screenshot is required before a visual defect can be closed.
 
 Current rendering/modeling status:
-- V25 king head/face side profile remains the last **failed real-device evidence**
+- V27 is the latest **failed real-device face/profile attempt**
+- GPT-5.6 Sol made multiple follow-up attempts and did not achieve an acceptable Pixel face
 - V27 preserves the coherent City Guard `head.001` mesh as the full side-profile authority and removes all custom nose/jaw/chin geometry
-- Blender inspection found the prior mouth/beard overlays near Y −0.14 while the authored lower-face surface is only about Y −0.058 to −0.071, explaining the exaggerated lower-face projection
+- Blender inspection found the prior mouth/beard overlays near Y −0.14 while the authored lower-face surface is only about Y −0.058 to −0.071, explaining one earlier deformation
 - `tools/qa/king_profile_bounds.py` verifies V27 overlays remain within <3 mm of measured face-surface depth and add zero rear/side/top silhouette
-- runtime/build tests passing does not imply character-visual acceptance
-- V27 requires a fresh Pixel front/side/3/4 review; if it fails, use a single replacement head mesh/model validated on-device
+- those geometric checks did **not** translate into an acceptable final Pixel appearance
+- face work is paused; if reopened, use a single replacement head mesh/model and Pixel-first validation instead of another procedural-overlay pass
 
 ## Android automation safety
 
