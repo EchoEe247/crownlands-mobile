@@ -1,6 +1,6 @@
-# Current State — V25 Living World
+# Current State — V26 Audit & Head Candidate
 
-Date: 2026-09-29 (latest real-device review after V25)
+Date: 2026-09-29 (V26 code/audit pass; latest real-device visual evidence is still the rejected V25 Pixel side view)
 
 ## Verified implementation
 
@@ -72,7 +72,7 @@ Runtime browser probe reports:
 
 ## Current acceptance status
 
-**V25 is not visually complete.** Build/test/runtime checks pass, but the latest Pixel Android Chrome side-view screenshot still shows the playable king's head/face as deformed. That real-device evidence overrides the cleaner headless Blender renders used during the V25 implementation.
+**V26 is mechanically verified but not yet visually accepted.** V25 remains the latest real-device evidence and its Pixel Android Chrome side view showed a deformed procedural head/profile. V26 changes the approach: the king now keeps the City Guard asset's coherent `head.001` skin mesh as the skull silhouette and only adds shallow fitted hair, eyes, nose, beard and mouth overlays. Automated presentation/regression checks pass, but a fresh Pixel front/side/3/4 review is still required.
 
 What is accepted from the recent presentation work:
 - king world scale is in the intended NPC family range (1.80 m vs 1.72 m baseline)
@@ -82,10 +82,9 @@ What is accepted from the recent presentation work:
 - the player remains embodied and mobile controls continue to function
 
 What is **not** accepted:
-- final head mesh
-- side facial silhouette
-- final facial proportions/readability
-- any claim that V25 solved the king face/profile problem
+- V26 front/side/3/4 silhouette acceptance on Pixel
+- final facial proportions/readability at gameplay distance
+- any claim that V26 solved the king face/profile problem before fresh real-device evidence
 
 **Next character task:** replace/re-author the head as a coherent model with front/side/3/4 silhouette validation against Pixel screenshots. Do not continue treating procedural primitive placement plus Blender-only QA as sufficient acceptance.
 
@@ -104,6 +103,26 @@ The next real-device pass should focus on:
 8. optionally a Blackmere war/campaign
 
 Do not revert the simulation architecture to the old route-only NPC prototype.
+
+## V26 audit/stability pass and stock-head candidate
+
+V26 incorporates the Sonnet 5.5 audit into executable behavior rather than documentation-only fixes:
+
+- conquered House Valemar becomes defeated/vassalized and cannot automatically or manually re-declare war
+- strategy/raid randomness uses the seedable gameplay RNG where touched by this pass
+- save writes are guarded so blocked/full local storage cannot abort the render loop
+- save schema is versioned at v3, deep-merges per-power/nested fields, sanitizes corrupt numeric clock/king values, and persists partial-day production
+- day skipping now advances the actor simulation in bounded steps instead of jumping the clock past production
+- grain has bounded storage/spoilage, unpaid garrison wages create royal debt/consequences, and arms/iron accounting uses the actual 0.5-iron cost consistently
+- failed raider asset loads cannot leave a raid permanently pending; completed/aborted raid objects are removed and disposable resources are released
+- the duplicate renderer resize path was removed and the VisualViewport-aware path remains authoritative
+- living-renderer target arrays and major camera/movement/lighting scratch objects are reused instead of allocated every frame
+- CI now runs tests, rebuilds the bundle, and fails if committed `dist/game.fast.js` is stale
+- executable audit regressions cover conquest, old/corrupt save hydration, blocked storage, fast-forward production and partial-day production persistence
+
+For the face, V26 abandons the V25 replacement skull. Blender inspection confirmed `head` is an animation transform while `head.001` is the actual approximately 0.303 × 0.254 × 0.324 skin head mesh. V26 leaves `head.001` visible, hides the stock visor/face/hair pieces, and layers shallow royal identity features without redefining the cranial silhouette. This is deliberately a different strategy from V21–V25.
+
+**Visual acceptance remains open until Pixel evidence exists.**
 
 ## V11 king visibility hotfix
 

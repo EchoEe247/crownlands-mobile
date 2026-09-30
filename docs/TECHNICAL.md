@@ -120,10 +120,11 @@ Use:
 
 Current caution: V25 demonstrated that a clean Blender head render can still disagree with the final Pixel side silhouette. For player-character appearance, Blender is preflight only; a fresh real-device screenshot is required before a visual defect can be closed.
 
-Current unresolved rendering/modeling defect:
-- V25 king head/face side profile remains deformed on Pixel Android Chrome
+Current rendering/modeling status:
+- V25 king head/face side profile remains the last **failed real-device evidence**
+- V26 preserves the coherent City Guard `head.001` mesh and removes the V25 replacement skull; only shallow identity overlays remain
 - runtime/build tests passing does not imply character-visual acceptance
-- next implementation should reduce procedural overlay complexity and use a coherent head mesh/model validated on-device
+- V26 requires a fresh Pixel front/side/3/4 review; if it fails, use a single replacement head mesh/model validated on-device
 
 ## Android automation safety
 

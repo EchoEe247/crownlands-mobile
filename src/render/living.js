@@ -28,7 +28,7 @@ const assetType=a=>ASSETS[a.look?.asset]?a.look.asset:(['royalguard','soldier','
 export async function createLivingRenderer(scene){
   const loader=new GLTFLoader(),templates={};
   await Promise.all(Object.entries(ASSETS).map(async([k,url])=>{templates[k]=await new Promise((res,rej)=>loader.load(url,res,undefined,rej))}));
-  const slots=[],byType={guard:[],innkeeper:[],merchant:[],mage:[]};
+  const slots=[],targets=[],byType={guard:[],innkeeper:[],merchant:[],mage:[]};
   for(const type of Object.keys(CAP)){
     const src=templates[type];
     for(let i=0;i<CAP[type];i++){
@@ -71,8 +71,9 @@ export async function createLivingRenderer(scene){
       }
     }
   }
+  function refreshTargets(){targets.length=0;for(const s of slots)if(s.actor&&s.root.visible)targets.push({actor:s.actor,root:s.root,ring:s.ring})}
   function update(playerPos,dt){
-    selectT-=dt;if(selectT<=0){selectT=.45;choose(playerPos)}
+    selectT-=dt;if(selectT<=0){selectT=.45;choose(playerPos);refreshTargets()}
     for(const s of slots){
       if(!s.actor||!s.root.visible)continue;const a=s.actor;
       s.root.position.set(a.x,a.y||0,a.z);s.root.rotation.y=a.yaw||0;
@@ -94,7 +95,7 @@ export async function createLivingRenderer(scene){
   }
   return {
     update,
-    get targets(){return slots.filter(s=>s.actor&&s.root.visible).map(s=>({actor:s.actor,root:s.root,ring:s.ring}))},
+    get targets(){return targets},
     visibleCount:()=>slots.filter(s=>s.actor&&s.root.visible).length,
     capacity:slots.length
   }

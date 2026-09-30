@@ -4,11 +4,11 @@
 
 Current development target: **Google Pixel 6a + Android Chrome**, served locally from **Termux**. Ubuntu/proot and Blender are tooling only; no AWS VM or cloud runtime is required.
 
-## Current V25 build
+## Current V26 candidate
 
-The current playable build combines the V10 living-world/simulation foundation with the mobile presentation and king-character work through V25.
+The current playable build combines the V10 living-world/simulation foundation with the V26 audit/stability pass and a new king-head candidate.
 
-**Important current visual status:** V25 is mechanically/build verified, but the playable king's head is **not visually accepted**. The latest real Pixel side-view screenshot still shows a deformed facial/head profile. Blender/headless renders are useful modeling checks, but they did not reproduce the final Android Chrome result closely enough to close this issue.
+**Important current visual status:** V25 was rejected on the real Pixel because its procedural side profile was deformed. V26 stops replacing the skull: it keeps the City Guard asset's coherent `head.001` skin mesh and adds only shallow hair/face/beard overlays. The V26 code and geometry invariants are verified, but the face is still **pending fresh Pixel front/side/3/4 acceptance**.
 
 - embodied third-person king with touch movement/camera
 - throne sit/stand and court petitions
@@ -44,7 +44,7 @@ cd ~/MainWorkspace/crownlands-mobile
 Open in Android Chrome:
 
 ```
-http://127.0.0.1:5205/?v=25
+http://127.0.0.1:5205/?v=26
 ```
 
 Controls:
@@ -115,7 +115,7 @@ Automated tests currently cover navigation, actor scheduling/order interruption,
 
 The Termux desktop Chromium available to automation still cannot keep a usable WebGL context. It can verify DOM/runtime state but not provide authoritative 3D screenshots. **Actual Pixel Chrome remains the final visual renderer.**
 
-**Open visual blocker:** the V25 king head/face is still deformed from the side in the actual Pixel renderer. Do not describe V25 as a completed face/profile fix, and do not use Blender-only renders as final acceptance for character appearance. The next character pass should start from the Pixel screenshot evidence and should prefer a coherent modeled/rigged head asset or a deliberately authored mesh over further stacks of runtime primitives.
+**Open visual blocker:** V26 is the first pass to preserve the known-good coherent `head.001` skull instead of authoring a replacement procedural skull. Do not describe the face/profile as fixed until a fresh Pixel Chrome screenshot confirms front, exact side and 3/4 silhouettes. If V26 still fails on-device, replace the head asset/model rather than returning to stacked procedural skull geometry.
 
 ## Assets and licensing
 

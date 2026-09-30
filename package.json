@@ -1,6 +1,6 @@
 {
   "name": "crownlands-mobile",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "description": "Mobile-first 3D king simulation for Android/Pixel-class devices.",
   "type": "module",
@@ -9,10 +9,11 @@
     "check": "node --check src/game.js && node --check dist/game.fast.js",
     "serve": "python -m http.server 5205 --bind 127.0.0.1",
     "test:sim": "node tests/simulation.mjs",
-    "test": "npm run check && npm run test:assets && npm run test:presentation && npm run test:sim && npm run test:world && npm run test:save && npm run test:war",
+    "test": "npm run check && npm run test:assets && npm run test:presentation && npm run test:sim && npm run test:world && npm run test:save && npm run test:war && npm run test:audit",
     "test:world": "node tests/living_world.mjs",
     "test:save": "node tests/save_resume.mjs",
     "test:war": "node tests/war_campaign.mjs",
+    "test:audit": "node tests/audit_regressions.mjs",
     "test:assets": "node tests/assets.mjs",
     "test:presentation": "node tests/player_presentation.mjs"
   },

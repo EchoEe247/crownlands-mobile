@@ -19,9 +19,9 @@ Crownlands prefers assets that are clearly reusable and redistributable. The cur
 
 ## Current player-character asset status
 
-The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia and a custom runtime head treatment. The legacy Quaternius `king-knight.glb` is not the current player body.
+The current playable body is based on `assets/guard.glb` (3DAssets.dev City Guard, CC0) with runtime royal regalia. V26 also reuses that asset's coherent `head.001` skin mesh for the king's cranial silhouette, while stock helmet/face/hair pieces are hidden and shallow runtime identity features are layered on top. No new third-party character asset was introduced. The legacy Quaternius `king-knight.glb` is not the current player body.
 
-As of V25, the runtime-created king head is **not visually accepted**: the latest Pixel side-view screenshot still shows a deformed profile. This is a modeling/rendering issue, not an asset-license issue. A future replacement head should be original or clearly redistributable and must be added here if it introduces a new external asset.
+V25 remains **rejected** by the latest Pixel side-view evidence. V26 is a pending real-device candidate; if a future replacement head is introduced, it must be original or clearly redistributable and recorded here.
 
 ## Source links
 

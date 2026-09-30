@@ -1,5 +1,5 @@
 import {S,on,chronicle,clampRealm,delta} from './core.js';
-import {chance,rr,clamp} from '../util.js';
+import {chance,rnd,rr,clamp} from '../util.js';
 
 function power(id){return S.powers[id]}
 export function relation(id,amount,reason){
@@ -9,10 +9,19 @@ export function treaty(id,type,on=true){
   const p=power(id);if(!p)return false;p.treaties[type]=on;if(on)S.stats.treaties++;relation(id,on?8:-5,(on?'Treaty signed with ':'Treaty ended with ')+p.name);return true;
 }
 export function declareWar(id){
-  const p=power(id);if(!p||p.war)return false;p.war=true;p.rel=Math.min(p.rel,-60);S.war.state='war';S.war.host=id;S.war.lastWar=S.clock;chronicle('War declared between the Crownlands and '+p.name+'.','war');return true;
+  const p=power(id);if(!p||p.war||p.defeated||p.vassal)return false;p.war=true;p.rel=Math.min(p.rel,-60);S.war.state='war';S.war.host=id;S.war.lastWar=S.clock;chronicle('War declared between the Crownlands and '+p.name+'.','war');return true;
 }
 export function makePeace(id){
   const p=power(id);if(!p||!p.war)return false;p.war=false;p.rel=Math.max(p.rel,-15);if(S.war.host===id){S.war.state='peace';S.war.host=null}chronicle('Peace concluded with '+p.name+'.','diplomacy');return true;
+}
+export function conquerPower(id){
+  const p=power(id);if(!p)return false;
+  p.war=false;p.defeated=true;p.vassal=true;p.mobilized=false;p.army=0;p.aggression=0;p.rel=Math.max(-20,p.rel);
+  p.mood='subjugated';p.cool=9999;
+  if(S.war.host===id)S.war.host=null;
+  S.war.state='victory';
+  chronicle(p.name+' has submitted to the Crownlands.','war');
+  return true;
 }
 on('day',()=>{
   for(const p of Object.values(S.powers)){

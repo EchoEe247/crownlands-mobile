@@ -21,7 +21,7 @@ The actual game target is Android / Pixel 6a class hardware.
 Current play path:
 
 - Termux hosts the static files locally.
-- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=25` (advance the query value whenever the served bundle version changes).
+- Android Chrome opens the current cache-busted build at `http://127.0.0.1:5205/?v=26` (advance the query value whenever the served bundle version changes).
 - Ubuntu/proot may be used for Blender/tooling, but it is not the runtime.
 - AWS or another remote VM is not part of the game dependency graph.
 
@@ -148,7 +148,7 @@ Use:
 
 ### Current visual blocker
 
-The V25 king head is **not accepted**. The latest Pixel side-view screenshot still shows a deformed profile even though the headless Blender QA looked cleaner.
+V25 is **rejected**: the latest Pixel side-view screenshot showed a deformed procedural profile even though headless QA looked cleaner. V26 now preserves the City Guard asset's coherent `head.001` skin mesh and limits custom work to shallow identity overlays. V26 remains **unaccepted visually** until a fresh Pixel review passes.
 
 For king/player visual work:
 
@@ -156,7 +156,7 @@ For king/player visual work:
 - Blender renders are preflight evidence only; they cannot close a Pixel rendering defect by themselves.
 - Do not report a face/head/profile issue as fixed until a fresh Pixel screenshot confirms it.
 - Preserve a rejected state in docs when the user's real-device screenshot contradicts local/model QA.
-- For the next head revision, prefer one coherent modeled/rigged head or authored mesh. Avoid accumulating independent face/chin/hair primitives that can produce renderer-dependent silhouette problems.
+- Preserve the coherent stock `head.001` silhouette in V26. If it still fails on Pixel, replace it with one coherent modeled/rigged head; do not return to a custom procedural skull made from stacked face/chin/hair masses.
 
 ## Primary-display safety
 

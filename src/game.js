@@ -7,12 +7,14 @@ import {actors,player as simPlayer,stepAll,issueOrder,cancelOrder,makeActor,plac
 import './sim/schedules.js';
 import './sim/military.js';
 import './sim/economy.js';
-import {diplomacySummary,relation,treaty,declareWar,makePeace} from './sim/strategy.js';
+import {diplomacySummary,relation,treaty,declareWar,makePeace,conquerPower} from './sim/strategy.js';
 import {populateWorld,snapshotActors} from './sim/population.js';
 import {createLivingRenderer} from './render/living.js';
 import {createWorldGeometry} from './render/world.js';
 import {fitCharacterHeight} from './render/characterBounds.js';
 import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_FACE,KING_CAMERA} from './presentation.js';
+import {rnd} from './util.js';
+import {safePersist,fastForwardSimulation} from './runtime.js';
 
 const $=id=>document.getElementById(id);
 const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),cameraModeBtn=$('cameraMode'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
@@ -38,6 +40,7 @@ const fill=new THREE.PointLight(0xffbd68,12,12,2);fill.position.set(0,3.3,5.7);s
 const ground=new THREE.Mesh(new THREE.CircleGeometry(11.5,64),new THREE.MeshStandardMaterial({color:0xa9987c,roughness:.92}));ground.rotation.x=-Math.PI/2;ground.position.y=-.035;ground.receiveShadow=true;scene.add(ground);
 const world=new THREE.Group();scene.add(world);
 const player=new THREE.Group();player.position.set(0,0,9);player.rotation.y=Math.PI;scene.add(player);
+const frameColor=new THREE.Color(),moveScratch=new THREE.Vector3(),raidTargetScratch=new THREE.Vector3(),nextScratch=new THREE.Vector3(),axisScratch=new THREE.Vector3(),camTargetScratch=new THREE.Vector3(),camDirScratch=new THREE.Vector3(),camPosScratch=new THREE.Vector3(),camLookScratch=new THREE.Vector3();
 
 let playerVisual,kingHead,legL,legR,shinL,shinR,armL,armR,foreL,foreR,hips,torso,loadedEssential=0,ready=false,cameraMode=KING_CAMERA.defaultMode,cameraYaw=0,cameraYawTarget=0,cameraPitch=KING_CAMERA.third.defaultPitch,cameraPitchTarget=KING_CAMERA.third.defaultPitch,moveX=0,moveY=0,currentTarget=null,dialogueOpen=false,moving=false,walkPhase=0,seated=false,livingRenderer=null,worldRenderer=null,autosaveT=0,fpsEMA=60;
 let guardMode='patrol',armyMode='drill',playerMixer=null,kingIdleAction=null,kingWalkAction=null,kingAttackAction=null,kingAnimState='idle',cape=null,royalRegalia=null,currentZone='ROYAL COURT',raidActive=false,raidWave=0,raidPending=0;
@@ -61,9 +64,11 @@ const realm={
   get guardMode(){return S.guard.mode},set guardMode(v){S.guard.mode=v},
   get armyMode(){return S.army.directive},set armyMode(v){S.army.directive=v}
 };
+let saveWarningShown=false;
 const save=()=>{
   S.king.x=player.position.x;S.king.z=player.position.z;S.king.yaw=player.rotation.y;S.king.seated=seated;
-  snapshotActors();localStorage.setItem('crownlands_state_v2',JSON.stringify(serializeState()))
+  snapshotActors();
+  return safePersist(localStorage,'crownlands_state_v2',serializeState(),err=>{console.warn('Crownlands save failed',err);if(!saveWarningShown){saveWarningShown=true;toast('SAVE UNAVAILABLE — PROGRESS MAY NOT PERSIST')}})
 };
 function clampRealm(){clampSimRealm()}
 function renderStats(){for(const k of ['gold','favor','security','prosperity'])$(k).textContent=realm[k];document.querySelector('.royal-chip small').textContent='THE CROWNLANDS · '+seasonName().toUpperCase()+' · DAY '+simDay()+' · YEAR '+simYear()}renderStats();
@@ -74,7 +79,7 @@ function tone(freq,dur=.18,gain=.025,type='sine',delay=0){if(!audioCtx)return;co
 function royalChime(){tone(392,.25,.025,'triangle',0);tone(523,.3,.025,'triangle',.12);tone(659,.35,.02,'triangle',.24)}
 function alarmHorn(){tone(130,.55,.035,'sawtooth',0);tone(110,.55,.03,'sawtooth',.48)}
 function swordSound(){tone(420,.09,.018,'sawtooth',0);tone(190,.12,.015,'triangle',.06)}
-function updateLighting(dt){worldLightTime=(S.clock%24)/24;const a=(worldLightTime-.25)*Math.PI*2,day=.56+.36*Math.sin(a);sun.position.set(Math.cos(a)*16,5+Math.max(0,Math.sin(a))*15,Math.sin(a)*13);sun.intensity=1.25+Math.max(.05,day)*2.1;hemi.intensity=.8+Math.max(.05,day)*1.45;const c=new THREE.Color().setHSL(.58,.28,THREE.MathUtils.clamp(.22+day*.38,.24,.62));scene.background.copy(c);scene.fog.color.copy(c)}
+function updateLighting(dt){worldLightTime=(S.clock%24)/24;const a=(worldLightTime-.25)*Math.PI*2,day=.56+.36*Math.sin(a);sun.position.set(Math.cos(a)*16,5+Math.max(0,Math.sin(a))*15,Math.sin(a)*13);sun.intensity=1.25+Math.max(.05,day)*2.1;hemi.intensity=.8+Math.max(.05,day)*1.45;frameColor.setHSL(.58,.28,THREE.MathUtils.clamp(.22+day*.38,.24,.62));scene.background.copy(frameColor);scene.fog.color.copy(frameColor)}
 const petitions={
  captain:[
   {text:'Your Majesty, raiders crossed the eastern ford at dawn. The villages ask for the Crown’s protection.',choices:[{title:'Ride out the Royal Guard',note:'−70 coin · +16 security · +6 favor',delta:{gold:-70,security:16,favor:6}},{title:'Fortify the villages',note:'−45 coin · +9 security · +5 prosperity',delta:{gold:-45,security:9,prosperity:5}}]},
@@ -125,7 +130,7 @@ async function loadPlayer(){
       if(n==='fore-l')foreL=o;if(n==='fore-r')foreR=o;
       if(n==='torso')torso=o;if(n==='head')kingHead=o;if(n==='city-guard')hips=o;
       // Remove the guard helmet/visor shells so the actual skin head remains visible under the crown.
-      if(n==='face'||n==='hair'||n==='head.001'||n.startsWith('weapon'))o.visible=false;
+      if(n==='face'||n==='hair'||n.startsWith('weapon'))o.visible=false;
       if(n)kingRest.set(o.name,{q:o.quaternion.clone(),p:o.position.clone()});
       if(o.isMesh&&o.material){
         o.frustumCulled=false;
@@ -174,8 +179,12 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeMasculineKingFace(){
-  const g=new THREE.Group();g.name='king-face-profile-v25';g.userData.isKingFace=true;
-  const skin=new THREE.MeshStandardMaterial({color:0xc18b63,roughness:.72,metalness:0,flatShading:true});
+  // V26 deliberately keeps the guard asset's coherent head.001 skull mesh.
+  // Earlier V21-V25 passes replaced the skull with stacked/procedural geometry,
+  // which repeatedly failed exact-side Pixel review. This group adds only
+  // shallow identity features that cannot redefine the base cranial silhouette.
+  const g=new THREE.Group();g.name='king-face-stock-head-v26';g.userData.isKingFace=true;g.userData.profileSource='head.001';
+  const skin=new THREE.MeshStandardMaterial({color:0xc18b63,roughness:.72,metalness:0});
   const skinShadow=new THREE.MeshStandardMaterial({color:0x936047,roughness:.84,metalness:0});
   const eyeWhite=new THREE.MeshStandardMaterial({color:0xf2eadb,roughness:.58,metalness:0});
   const iris=new THREE.MeshStandardMaterial({color:0x426274,roughness:.42,metalness:0});
@@ -184,106 +193,55 @@ function makeMasculineKingFace(){
   const beard=new THREE.MeshStandardMaterial({color:0x3a2419,roughness:.94,metalness:0});
   const lip=new THREE.MeshStandardMaterial({color:0x5a2c29,roughness:.84,metalness:0});
 
-  // One coherent faceted head shell. Each vertical level has a deliberate
-  // front/back profile so the side silhouette is forehead -> nose -> lips -> chin,
-  // instead of a sphere plus a protruding chin block.
-  const levels=[
-    {z:-.084,w:.082,front:-.118,back:.074},
-    {z:-.050,w:.112,front:KING_FACE.headFrontChinY,back:.103},
-    {z:.010,w:.120,front:KING_FACE.headFrontMouthY,back:KING_FACE.headBackY},
-    {z:.075,w:.126,front:-.135,back:.122},
-    {z:.142,w:.124,front:KING_FACE.headFrontForeheadY,back:.118},
-    {z:.205,w:.110,front:-.108,back:.103},
-    {z:KING_FACE.headTopZ,w:.078,front:-.070,back:.072},
-  ];
-  const ringSegments=8,hv=[];
-  for(const L of levels){
-    for(let i=0;i<ringSegments;i++){
-      const a=i/ringSegments*Math.PI*2,c=Math.cos(a),sn=Math.sin(a);
-      const y=c>=0?L.front*c:L.back*(-c);
-      hv.push(L.w*sn,y,L.z)
-    }
+  // Shallow fitted hair: all pieces stay inside the measured stock-head depth.
+  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.214,.112,.020),hair);
+  hairTop.name='king-hair-top';hairTop.position.set(0,.006,.238);g.add(hairTop);
+  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.218,.016,.096),hair);
+  hairBack.name='king-hair-back';hairBack.position.set(0,.116,.174);g.add(hairBack);
+  for(const x of [-.119,.119]){
+    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.015,.070,.092),hair);
+    sideHair.position.set(x,.030,.166);g.add(sideHair)
   }
-  const hi=[];
-  for(let r=0;r<levels.length-1;r++){
-    const a=r*ringSegments,b=(r+1)*ringSegments;
-    for(let i=0;i<ringSegments;i++){
-      const j=(i+1)%ringSegments;
-      hi.push(a+i,b+i,a+j, a+j,b+i,b+j)
-    }
-  }
-  for(let i=1;i<ringSegments-1;i++)hi.push(0,i+1,i);
-  const top=(levels.length-1)*ringSegments;
-  for(let i=1;i<ringSegments-1;i++)hi.push(top,top+i,top+i+1);
-  const headGeo=new THREE.BufferGeometry();
-  headGeo.setAttribute('position',new THREE.Float32BufferAttribute(hv,3));headGeo.setIndex(hi);headGeo.computeVertexNormals();
-  const headBase=new THREE.Mesh(headGeo,skin);headBase.name='king-head-profile-shell';headBase.castShadow=true;g.add(headBase);
-
-  // Small ears that sit inside the skull depth rather than sticking out behind it.
-  for(const x of [-.137,.137]){
-    const ear=new THREE.Mesh(new THREE.SphereGeometry(.026,7,5),skinShadow);
-    ear.scale.set(.50,.42,1);ear.position.set(x,.000,.090);g.add(ear)
+  for(const x of [-.055,-.018,.018,.055]){
+    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.033,.012,.022),hair);
+    fringe.position.set(x,-.116,.205+(Math.abs(x)<.025?.005:0));fringe.rotation.z=x*.45;g.add(fringe)
   }
 
-  // Fitted short hair follows the skull surface and stays entirely above/behind the face.
-  const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.206,.118,.018),hair);
-  hairTop.name='king-hair-top';hairTop.position.set(0,.010,.238);g.add(hairTop);
-  const hairBack=new THREE.Mesh(new THREE.BoxGeometry(.208,.018,.082),hair);
-  hairBack.name='king-hair-back';hairBack.position.set(0,.108,.183);g.add(hairBack);
-  for(const x of [-.118,.118]){
-    const sideHair=new THREE.Mesh(new THREE.BoxGeometry(.016,.084,.070),hair);
-    sideHair.position.set(x,.018,.177);g.add(sideHair)
-  }
-  for(const x of [-.058,-.019,.019,.058]){
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.036,.015,.026),hair);
-    fringe.position.set(x,-.104,.203+(Math.abs(x)<.025?.006:0));fringe.rotation.z=x*.55;g.add(fringe)
-  }
-
-  // Deep-set adult eyes and stern brows.
+  // Features are intentionally shallow overlays on head.001.
   for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const socket=new THREE.Mesh(new THREE.BoxGeometry(.060,.008,.032),skinShadow);
-    socket.position.set(x,-.126,KING_FACE.eyeZ);g.add(socket);
+    const socket=new THREE.Mesh(new THREE.BoxGeometry(.056,.006,.029),skinShadow);
+    socket.position.set(x,-.129,KING_FACE.eyeZ);g.add(socket);
     const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,10,7),eyeWhite);
-    eye.scale.set(1.18,.28,.56);eye.position.set(x,-.136,KING_FACE.eyeZ);g.add(eye);
-    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0115,8,6),iris);
-    ir.scale.set(.90,.20,1);ir.position.set(x,-.148,KING_FACE.eyeZ);g.add(ir);
-    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0058,7,5),pupil);
-    pu.scale.set(.90,.18,1);pu.position.set(x,-.154,KING_FACE.eyeZ);g.add(pu);
-
-    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.010,.018),hair);
-    brow.position.set(x,-.137,KING_FACE.browZ);brow.rotation.y=x<0?-.18:.18;g.add(brow)
+    eye.scale.set(1.12,.20,.52);eye.position.set(x,-.134,KING_FACE.eyeZ);g.add(eye);
+    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0105,8,6),iris);
+    ir.scale.set(.88,.16,1);ir.position.set(x,-.139,KING_FACE.eyeZ);g.add(ir);
+    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0052,7,5),pupil);
+    pu.scale.set(.88,.14,1);pu.position.set(x,-.142,KING_FACE.eyeZ);g.add(pu);
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.008,.016),hair);
+    brow.position.set(x,-.132,KING_FACE.browZ);brow.rotation.y=x<0?-.14:.14;g.add(brow)
   }
 
-  // Compact straight nose: only the nose projects, not the entire facial mass.
+  // Nose is the only feature allowed to project meaningfully beyond the stock head.
   const noseGeo=new THREE.BufferGeometry();
-  const nv=[
-    -.019,-.127,.157, .019,-.127,.157,
-    -.026,-.134,.078, .026,-.134,.078,
-     0,KING_FACE.noseTipY,.061,
-    -.017,-.137,.038, .017,-.137,.038
-  ];
+  const nv=[-.017,-.128,.156,.017,-.128,.156,-.022,-.132,.082,.022,-.132,.082,0,KING_FACE.noseTipY,.066,-.015,-.133,.047,.015,-.133,.047];
   const ni=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
   noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(nv,3));noseGeo.setIndex(ni);noseGeo.computeVertexNormals();
   const nose=new THREE.Mesh(noseGeo,skin);nose.name='king-profile-nose';nose.castShadow=true;g.add(nose);
 
-  // Trimmed beard follows the jaw plane. It is shallow in Y so it cannot deform profile.
-  for(const x of [-.099,.099]){
-    const side=new THREE.Mesh(new THREE.BoxGeometry(.030,.009,.112),beard);
-    side.position.set(x,-.143,.004);g.add(side)
+  for(const x of [-.104,.104]){
+    const sideburn=new THREE.Mesh(new THREE.BoxGeometry(.024,.007,.098),beard);
+    sideburn.position.set(x,-.127,.025);g.add(sideburn)
   }
-  const beardChin=new THREE.Mesh(new THREE.BoxGeometry(.164,.010,.056),beard);
-  beardChin.name='king-trimmed-beard';beardChin.position.set(0,-.145,-.047);g.add(beardChin);
-  for(const x of [-.021,.021]){
-    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.042,.008,.012),beard);
-    moustache.position.set(x,-.151,.034);moustache.rotation.y=x<0?-.10:.10;g.add(moustache)
+  const beardChin=new THREE.Mesh(new THREE.BoxGeometry(.160,.007,.052),beard);
+  beardChin.name='king-trimmed-beard';beardChin.position.set(0,-.132,-.043);g.add(beardChin);
+  for(const x of [-.020,.020]){
+    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.040,.006,.011),beard);
+    moustache.position.set(x,-.143,.034);moustache.rotation.y=x<0?-.08:.08;g.add(moustache)
   }
-
-  // Firm mouth sits just ahead of the mouth plane, with no separate protruding chin.
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.080,.008,.010),lip);
-  mouth.position.set(0,-.151,KING_FACE.mouthZ);g.add(mouth);
-  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.060,.006,.009),skinShadow);
-  lowerLip.position.set(0,-.147,KING_FACE.mouthZ-.018);g.add(lowerLip);
-
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.076,.006,.009),lip);
+  mouth.position.set(0,-.143,KING_FACE.mouthZ);g.add(mouth);
+  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.056,.005,.008),skinShadow);
+  lowerLip.position.set(0,-.139,KING_FACE.mouthZ-.017);g.add(lowerLip);
   return g
 }
 function makeRoyalCrown(){
@@ -405,9 +363,11 @@ function appendDiplomacyCommands(){
   const d=diplomacySummary(),v=d.valemar,k=d.kestrel;
   const options=[];
   if(!S.powers.kestrel.treaties.trade)options.push(['Trade accord with House Kestrel','Relation '+k.rel+' · improves long-term stability',()=>{treaty('kestrel','trade',true);realm.prosperity+=4;save();renderStats();closeDialog();toast('TRADE ACCORD SIGNED WITH HOUSE KESTREL')}]);
-  options.push(['Send envoy and gift to Blackmere','80 coin · improve relations with House Valemar',()=>{if(spend(80)){relation('valemar',15,'A royal envoy carried gifts to Blackmere.');save();closeDialog();toast('ENVOY SENT TO BLACKMERE')} }]);
-  if(S.powers.valemar.war)options.push(['Offer peace to House Valemar','End the current war if accepted by the Crown',()=>{makePeace('valemar');save();closeDialog();toast('PEACE TERMS SENT TO BLACKMERE')}]);
-  else options.push(['Declare war on House Valemar','Mobilize the Crown against Blackmere Keep',()=>{declareWar('valemar');S.army.directive='muster';armyMode='muster';save();closeDialog();toast('THE CROWN IS AT WAR WITH HOUSE VALEMAR')}]);
+  if(!(S.powers.valemar.defeated||S.powers.valemar.vassal)){
+    options.push(['Send envoy and gift to Blackmere','80 coin · improve relations with House Valemar',()=>{if(spend(80)){relation('valemar',15,'A royal envoy carried gifts to Blackmere.');save();closeDialog();toast('ENVOY SENT TO BLACKMERE')} }]);
+    if(S.powers.valemar.war)options.push(['Offer peace to House Valemar','End the current war',()=>{makePeace('valemar');save();closeDialog();toast('PEACE CONCLUDED WITH BLACKMERE')}]);
+    else options.push(['Declare war on House Valemar','Mobilize the Crown against Blackmere Keep',()=>{if(declareWar('valemar')){S.army.directive='muster';armyMode='muster';toast('THE CROWN IS AT WAR WITH HOUSE VALEMAR')}save();closeDialog()}]);
+  }
   for(const [t,n,fn] of options){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
 }
 function actorRole(a){return String(a.role||'subject').replaceAll(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}
@@ -430,8 +390,8 @@ function openActorAudience(a){
   dialogueOpen=true;dialogue.classList.remove('hidden');speakerRole.textContent=actorRole(a);speakerName.textContent=a.name;choicesEl.innerHTML='';
   if(a.petitionKey){audience(a);return}
   if(a.hero==='rival'){
-    const p=S.powers.valemar;dialogueText.textContent='Lord Maren watches you carefully. Relations: '+Math.round(p.rel)+'. '+(p.war?'Your realms are at war.':'Blackmere remains an independent rival power.');
-    const opts=p.war?
+    const p=S.powers.valemar;dialogueText.textContent='Lord Maren watches you carefully. Relations: '+Math.round(p.rel)+'. '+(p.defeated||p.vassal?'Blackmere has submitted to the Crownlands.':p.war?'Your realms are at war.':'Blackmere remains an independent rival power.');
+    const opts=(p.defeated||p.vassal)?[]:p.war?
       [['Offer peace','Attempt to end the war',()=>{makePeace('valemar');save();closeDialog()}]]:
       [['Demand improved relations','Royal pressure · relation may worsen',()=>{relation('valemar',-5,'The Crown issued a hard demand to Blackmere.');save();closeDialog()}],['Offer a pact','Improve relations by diplomacy',()=>{relation('valemar',10,'The King offered Blackmere a limited pact.');save();closeDialog()}]];
     for(const [t,n,fn] of opts){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}return
@@ -447,26 +407,31 @@ function openActorAudience(a){
   if(['royalguard','soldier','sergeant','captain'].includes(a.role))opts.splice(1,0,['Hold the main gate','Take a temporary defensive post',()=>{issueOrder(a,{type:'post',place:'gate',spot:'guard',hours:3,label:'Holding the main gate by royal order'});save();closeDialog();toast(a.name.toUpperCase()+' — GATE POST')}]);
   for(const [t,n,fn] of opts){const b=document.createElement('button');b.innerHTML='<b>'+t+'</b><small>'+n+'</small>';b.onclick=fn;choicesEl.appendChild(b)}
 }
-function moveUnit(u,target,dt,speed){const v=target.clone().sub(u.root.position);v.y=0;if(v.length()>.08){v.normalize();u.root.position.addScaledVector(v,dt*speed);u.root.rotation.y=Math.atan2(v.x,v.z)}}
+function moveUnit(u,target,dt,speed){const v=moveScratch.copy(target).sub(u.root.position);v.y=0;if(v.length()>.08){v.normalize();u.root.position.addScaledVector(v,dt*speed);u.root.rotation.y=Math.atan2(v.x,v.z)}}
 async function spawnRaider(name,pos){
  const src=await getGuardTemplate(),root=new THREE.Group();root.position.fromArray(pos);scene.add(root);
  const visual=cloneSkeleton(src.scene);prep(visual,true);visual.traverse(o=>{if(o.isMesh&&o.material){o.material.color?.multiply(new THREE.Color(0x7a3d3d));o.material.roughness=.78}});root.add(visual);
  const ring=new THREE.Mesh(new THREE.RingGeometry(.42,.52,24),new THREE.MeshBasicMaterial({color:0xff5a43,transparent:true,opacity:.34,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.02;root.add(ring);
- const u={name,root,ring,hp:55,attackCooldown:Math.random()*.7,alive:true,isRaider:true};raiders.push(u);raidPending=Math.max(0,raidPending-1);return u
+ const u={name,root,ring,hp:55,attackCooldown:rnd()*.7,alive:true,isRaider:true};raiders.push(u);raidPending=Math.max(0,raidPending-1);return u
 }
 async function spawnRaid(count=6){
  if(raidActive)return;raidActive=true;raidPending=count;raidWave++;warStatusEl.classList.remove('hidden');warStatusEl.textContent='RAID WAVE '+raidWave+' · ENEMIES AT THE GATE';initAudio();alarmHorn();toast('ALARM — RAIDERS AT THE MAIN GATE');
  setGuardMode('gate');setArmyMode('gate');
- for(let i=0;i<count;i++){setTimeout(()=>spawnRaider('Raider '+(i+1),[57+Math.floor(i/3)*1.8,0,-5+(i%3)*5]).catch(console.error),i*100)}
+ for(let i=0;i<count;i++){setTimeout(()=>spawnRaider('Raider '+(i+1),[57+Math.floor(i/3)*1.8,0,-5+(i%3)*5]).catch(err=>{console.error('raider spawn failed',err);raidPending=Math.max(0,raidPending-1);if(raidActive&&raidPending===0&&aliveRaiders().length===0)abortRaid('RAID ABORTED — ENEMY ASSET FAILED TO LOAD')}),i*100)}
 }
 function aliveRaiders(){return raiders.filter(r=>r.alive)}
 function nearestDefender(pos,arr){let best=null,bd=Infinity;for(const a of arr){if(!a.alive)continue;const d=Math.hypot(pos.x-a.x,pos.z-a.z);if(d<bd){bd=d;best=a}}return[best,bd]}
 function nearestRaiderToActor(a){let best=null,bd=Infinity;for(const r of aliveRaiders()){const d=Math.hypot(r.root.position.x-a.x,r.root.position.z-a.z);if(d<bd){bd=d;best=r}}return[best,bd]}
 function defeatUnit(u){u.alive=false;if(u.root)u.root.visible=false;u.fight=null}
+function cleanupRaiders(){
+ for(const r of raiders){if(r.root){r.root.traverse(o=>{if(o.isMesh&&o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose?.()}});r.ring?.geometry?.dispose?.();scene.remove(r.root)}}
+ raiders.length=0;raidPending=0
+}
+function abortRaid(message){raidActive=false;warStatusEl.classList.add('hidden');for(const a of actors)a.fight=null;cleanupRaiders();setGuardMode('routine');setArmyMode('routine');toast(message)}
 function finishRaid(win){
  raidActive=false;warStatusEl.classList.add('hidden');for(const a of actors)a.fight=null;
  if(win){realm.security+=6;realm.favor+=4;S.stats.raidsHeld=(S.stats.raidsHeld||0)+1;toast('RAID DEFEATED — THE CASTLE HOLDS')}else{realm.security-=15;realm.gold=Math.max(0,realm.gold-120);toast('THE RAIDERS BREACHED THE DEFENSES')}
- clampRealm();save();renderStats()
+ cleanupRaiders();clampRealm();save();renderStats()
 }
 function healForces(){for(const a of actors.filter(x=>['royalguard','soldier','sergeant','captain','marshal'].includes(x.role))){a.hp=a.maxhp;a.alive=true;a.fight=null}}
 function updateRaid(dt){
@@ -477,7 +442,7 @@ function updateRaid(dt){
  if(defenders.length===0){finishRaid(false);return}
  for(const r of enemies){
    const [t,d]=nearestDefender(r.root.position,defenders);if(!t)continue;
-   if(d>1.2){const target=new THREE.Vector3(t.x,0,t.z);moveUnit(r,target,dt,.82)}
+   if(d>1.2){raidTargetScratch.set(t.x,0,t.z);moveUnit(r,raidTargetScratch,dt,.82)}
    else{r.attackCooldown-=dt;if(r.attackCooldown<=0){r.attackCooldown=.95;t.hp-=14;t.fight={label:'Fighting raiders'};if(t.hp<=0)defeatUnit(t)}}
  }
  for(const a of defenders){
@@ -514,8 +479,8 @@ function updateWarfront(dt){
     }
     const livingEnemy=enemy.filter(a=>a.alive);
     if(enemy.length&&livingEnemy.length===0){
-      S.war.state='victory';S.war.campaign={target:'valemar',state:'won',ended:S.clock};S.war.victories=(S.war.victories||0)+1;
-      S.powers.valemar.war=false;S.powers.valemar.rel=-100;S.powers.valemar.army=0;realm.favor+=10;realm.security+=8;S.realm.renown=Math.min(100,S.realm.renown+12);
+      S.war.campaign={target:'valemar',state:'won',ended:S.clock};S.war.victories=(S.war.victories||0)+1;conquerPower('valemar');
+      realm.favor+=10;realm.security+=8;S.realm.renown=Math.min(100,S.realm.renown+12);
       setArmyMode('routine');clampRealm();save();renderStats();warStatusEl.classList.add('hidden');toast('BLACKMERE HAS FALLEN — CROWNLANDS VICTORIOUS')
     }else if(crown.length&&crown.filter(a=>a.alive).length===0){
       S.war.state='defeat';S.war.defeats=(S.war.defeats||0)+1;realm.security-=18;realm.favor-=8;S.army.directive='routine';armyMode='routine';clampRealm();save();renderStats();toast('THE CROWN ARMY HAS BEEN DEFEATED')
@@ -651,7 +616,7 @@ const done=()=>courtActors().length>=4&&courtActors().every(n=>n.used);
 function updateObjective(){objectiveEl.innerHTML=done()?'Court concluded. Return to your <b>THRONE</b>, explore the realm, or issue orders.':'Rule the realm. Hear petitions, inspect your people, explore, or open <b>ORDERS</b>.'}
 function resetCourtDay(){for(const n of courtActors()){n.used=false;n.petitionIndex=((n.petitionIndex||0)+1)%(petitions[n.petitionKey]?.length||1)}S.court.dayHeard=0}
 function nextDay(){
-  const target=(Math.floor(S.clock/24)+1)*24+8,deltaHours=Math.max(.1,target-S.clock);advanceTime(deltaHours*HOUR_SECONDS);
+  const target=(Math.floor(S.clock/24)+1)*24+8,deltaHours=Math.max(.1,target-S.clock);fastForwardSimulation(deltaHours*HOUR_SECONDS,advanceTime,stepAll);
   clampRealm();save();renderStats();updateObjective();toast('DAY '+simDay()+' — THE REALM AWAKENS')
 }
 simOn('day',({day})=>{
@@ -716,15 +681,15 @@ const keys=new Set();addEventListener('keydown',e=>{keys.add(e.code);if(e.code==
 function kb(){let x=0,y=0;if(keys.has('KeyW')||keys.has('ArrowUp'))y++;if(keys.has('KeyS')||keys.has('ArrowDown'))y--;if(keys.has('KeyA')||keys.has('ArrowLeft'))x--;if(keys.has('KeyD')||keys.has('ArrowRight'))x++;return{x,y}}
 function blockedAt(p){return realmBlockedAt(p.x,p.z,.38,false,false)}
 function tryMove(v,amount){
- const next=player.position.clone().addScaledVector(v,amount);next.x=THREE.MathUtils.clamp(next.x,WORLD.x0+1,WORLD.x1-1);next.z=THREE.MathUtils.clamp(next.z,WORLD.z0+1,WORLD.z1-1);
+ const next=nextScratch.copy(player.position).addScaledVector(v,amount);next.x=THREE.MathUtils.clamp(next.x,WORLD.x0+1,WORLD.x1-1);next.z=THREE.MathUtils.clamp(next.z,WORLD.z0+1,WORLD.z1-1);
  if(!blockedAt(next)){player.position.copy(next);return}
- const nx=player.position.clone();nx.x=next.x;if(!blockedAt(nx))player.position.x=nx.x;
- const nz=player.position.clone();nz.z=next.z;if(!blockedAt(nz))player.position.z=nz.z;
+ axisScratch.copy(player.position);axisScratch.x=next.x;if(!blockedAt(axisScratch))player.position.x=axisScratch.x;
+ axisScratch.copy(player.position);axisScratch.z=next.z;if(!blockedAt(axisScratch))player.position.z=axisScratch.z;
 }
 function move(dt){
   if(dialogueOpen||seated){moving=false;setKingAnimation('idle');return}
   const k=kb();let x=k.x||moveX,y=k.y||moveY,l=Math.hypot(x,y);
-  if(l>.08){if(l>1){x/=l;y/=l}const f=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw)),r=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw)),v=f.multiplyScalar(y).add(r.multiplyScalar(x));tryMove(v,dt*3.35);player.rotation.y=Math.atan2(v.x,v.z);moving=true;setKingAnimation('walk')}
+  if(l>.08){if(l>1){x/=l;y/=l}const sy=Math.sin(cameraYaw),cy=Math.cos(cameraYaw),v=moveScratch.set(-sy*y+cy*x,0,-cy*y-sy*x);tryMove(v,dt*3.35);player.rotation.y=Math.atan2(v.x,v.z);moving=true;setKingAnimation('walk')}
   else{moving=false;setKingAnimation('idle')}
 }function dampAngle(current,target,lambda,dt){
   const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
@@ -737,14 +702,14 @@ function cam(dt){
   cameraPitch=THREE.MathUtils.clamp(cameraPitch,cfg.minPitch,cfg.maxPitch);
   const blend=1-Math.exp(-dt*KING_CAMERA.look.positionDamping);
   if(cameraMode==='first'){
-    const eye=player.position.clone().add(new THREE.Vector3(0,seated?1.18:cfg.eyeHeight,0));
-    const cp=Math.cos(cameraPitch),forward=new THREE.Vector3(-Math.sin(cameraYaw)*cp,-Math.sin(cameraPitch),-Math.cos(cameraYaw)*cp);
-    camera.position.lerp(eye,blend);camera.lookAt(eye.clone().add(forward.multiplyScalar(8)));return
+    const eye=camTargetScratch.copy(player.position);eye.y+=seated?1.18:cfg.eyeHeight;
+    const cp=Math.cos(cameraPitch),forward=camDirScratch.set(-Math.sin(cameraYaw)*cp,-Math.sin(cameraPitch),-Math.cos(cameraYaw)*cp);
+    camera.position.lerp(eye,blend);camLookScratch.copy(eye).addScaledVector(forward,8);camera.lookAt(camLookScratch);return
   }
-  const t=player.position.clone().add(new THREE.Vector3(0,seated?cfg.seatedTargetY:cfg.standingTargetY,0));
-  const cp=Math.cos(cameraPitch),dir=new THREE.Vector3(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp);
-  const p=t.clone().addScaledVector(dir,seated?cfg.seatedDistance:cfg.standingDistance);
-  camera.position.lerp(p,blend);camera.lookAt(t)
+  const t=camTargetScratch.copy(player.position);t.y+=seated?cfg.seatedTargetY:cfg.standingTargetY;
+  const cp=Math.cos(cameraPitch),dir=camDirScratch.set(Math.sin(cameraYaw)*cp,Math.sin(cameraPitch),Math.cos(cameraYaw)*cp);
+  camPosScratch.copy(t).addScaledVector(dir,seated?cfg.seatedDistance:cfg.standingDistance);
+  camera.position.lerp(camPosScratch,blend);camera.lookAt(t)
 }
 function proximity(){
  attackBtn.disabled=seated||(!raidActive&&!S.powers.valemar.war);
@@ -769,7 +734,6 @@ function loop(){
  autosaveT+=dt;if(autosaveT>=5){autosaveT=0;save();renderStats();refreshCommandStatus()}
  renderer.render(scene,camera)
 }
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));renderer.setSize(innerWidth,innerHeight)});
 function bootProgressive(){
   guardMode=realm.guardMode||'routine';armyMode=realm.armyMode||'routine';
   player.position.set(Number.isFinite(S.king.x)?S.king.x:0,0,Number.isFinite(S.king.z)?S.king.z:9);
@@ -783,7 +747,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v25-clean-profile',
+    version:'v26-stock-head-audit-fix',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

@@ -7,17 +7,17 @@ export const YEAR_DAYS=96;
 export const START_HOUR=8;
 
 export function defaultState(){return{
-  ver:2,clock:START_HOUR,
-  realm:{coin:600,favor:55,security:62,prosperity:50,renown:10,tax:1,ration:1,farmFocus:1,unrestDays:0},
+  ver:3,clock:START_HOUR,
+  realm:{coin:600,debt:0,favor:55,security:62,prosperity:50,renown:10,tax:1,ration:1,farmFocus:1,unrestDays:0},
   stock:{grain:520,wood:80,iron:36,arms:26},
   build:{walls:0,granary:0,forge:0,barracks:0,market:0,watchtowers:0,farms:0},
-  ledger:{today:{in:{},out:{}},last:{in:{},out:{},net:0,day:0},hist:[]},
+  ledger:{today:{in:{},out:{}},productionToday:{grain:0,wood:0,iron:0,arms:0,trade:0,meals:0},last:{in:{},out:{},net:0,day:0},hist:[]},
   guard:{mode:'routine',until:0,recall:0,alarm:0},
   army:{directive:'routine',until:0,size:0,formation:'column',relay:''},
   king:{hp:100,maxhp:100,x:0,z:9,yaw:Math.PI,mounted:false,falls:0,seated:false,sleeps:0},
   weather:{type:'clear',until:10,intensity:0},
   powers:{
-    valemar:{id:'valemar',name:'House Valemar',ruler:'Lord Maren Valemar',seat:'Blackmere Keep',rel:-12,army:34,wealth:520,food:400,aggression:.62,treaties:{},war:false,vassal:false,intel:0,mood:'watchful',cool:0,mobilized:false,tribute:0},
+    valemar:{id:'valemar',name:'House Valemar',ruler:'Lord Maren Valemar',seat:'Blackmere Keep',rel:-12,army:34,wealth:520,food:400,aggression:.62,treaties:{},war:false,vassal:false,defeated:false,intel:0,mood:'watchful',cool:0,mobilized:false,tribute:0},
     kestrel:{id:'kestrel',name:'House Kestrel',ruler:'Duchess Ilse Kestrel',seat:'Highmoor',rel:8,army:46,wealth:700,food:500,aggression:.25,treaties:{},war:false,vassal:false,intel:0,mood:'courteous',cool:0,tribute:0},
     guild:{id:'guild',name:'Stonehollow Guild',ruler:'Guildmaster Torvik',seat:'Stonehollow',rel:14,army:6,wealth:400,food:200,aggression:0,treaties:{},war:false,vassal:false,intel:0,mood:'mercantile',cool:0,tribute:0},
     ashwood:{id:'ashwood',name:'Ashwood Company',ruler:'Captain Vex',seat:'Ashwood Camp',rel:-8,army:12,wealth:120,food:60,aggression:.5,treaties:{},war:false,vassal:false,intel:0,mood:'hungry',cool:0,tribute:0}
@@ -83,12 +83,31 @@ export function serializeState(){return JSON.parse(JSON.stringify(S))}
 export function hydrateState(saved){
   const base=defaultState();
   if(!saved||typeof saved!=='object')return replaceState(base);
+  const finite=(v,fallback)=>Number.isFinite(Number(v))?Number(v):fallback;
   const n={...base,...saved};
+  n.ver=base.ver;n.clock=finite(saved.clock,base.clock);
   n.realm={...base.realm,...saved.realm};n.stock={...base.stock,...saved.stock};n.build={...base.build,...saved.build};
   n.guard={...base.guard,...saved.guard};n.army={...base.army,...saved.army};n.king={...base.king,...saved.king};
-  n.weather={...base.weather,...saved.weather};n.war={...base.war,...saved.war};n.events={...base.events,...saved.events};
-  n.court={...base.court,...saved.court};n.goals={...base.goals,...saved.goals};n.stats={...base.stats,...saved.stats};
-  n.powers={...base.powers,...saved.powers};
+  n.weather={...base.weather,...saved.weather};n.war={...base.war,...saved.war};
+  n.ledger={...base.ledger,...saved.ledger,
+    today:{...base.ledger.today,...saved.ledger?.today,
+      in:{...base.ledger.today.in,...saved.ledger?.today?.in},
+      out:{...base.ledger.today.out,...saved.ledger?.today?.out}},
+    productionToday:{...base.ledger.productionToday,...saved.ledger?.productionToday},
+    last:{...base.ledger.last,...saved.ledger?.last},
+    hist:Array.isArray(saved.ledger?.hist)?saved.ledger.hist:base.ledger.hist};
+  n.events={...base.events,...saved.events,
+    flags:{...base.events.flags,...saved.events?.flags},
+    petitions:{...base.events.petitions,...saved.events?.petitions},
+    seen:{...base.events.seen,...saved.events?.seen}};
+  n.court={...base.court,...saved.court};
+  n.goals={...base.goals,...saved.goals,done:{...base.goals.done,...saved.goals?.done},progress:{...base.goals.progress,...saved.goals?.progress}};
+  n.stats={...base.stats,...saved.stats};
+  n.powers={};
+  for(const [id,p] of Object.entries(base.powers))n.powers[id]={...p,...saved.powers?.[id],treaties:{...p.treaties,...saved.powers?.[id]?.treaties}};
+  for(const [id,p] of Object.entries(saved.powers||{}))if(!n.powers[id])n.powers[id]={...p,treaties:{...(p.treaties||{})}};
+  n.realm.coin=Math.max(0,finite(n.realm.coin,base.realm.coin));n.realm.debt=Math.max(0,finite(n.realm.debt,0));
+  n.king.x=finite(n.king.x,base.king.x);n.king.z=finite(n.king.z,base.king.z);n.king.yaw=finite(n.king.yaw,base.king.yaw);
   replaceState(n);_lastHour=Math.floor(S.clock);_lastDay=day();return S
 }
 export const weatherFarmMod=()=>({clear:1,cloudy:1,rain:1.12,fog:.95,snow:.5}[S.weather.type]||1);

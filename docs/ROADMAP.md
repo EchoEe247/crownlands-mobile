@@ -24,11 +24,11 @@
 ## Next quality milestones
 
 ### Immediate blocker — king head/profile
-- V25 side-profile rebuild is **rejected on Pixel**; the actual side view remains deformed
-- stop claiming the face/head is fixed based on Blender-only QA
-- rebuild or replace the head as one coherent modeled/rigged asset or deliberately authored mesh
-- validate front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
-- preserve the already-correct body scale, crown, camera modes, regalia and mobile controls while replacing the head
+- V25 side-profile rebuild is **rejected on Pixel**; its custom procedural skull remains historical only
+- V26 keeps the coherent City Guard `head.001` skin mesh and uses shallow fitted hair/eyes/nose/beard overlays instead of replacing the skull
+- validate V26 front, exact side, rear and 3/4 silhouettes on actual Pixel Chrome before acceptance
+- if V26 still deforms on-device, move to a single replacement modeled/rigged head asset rather than another procedural skull pass
+- preserve the already-correct body scale, crown, camera modes, regalia and mobile controls
 
 ### Real-device polish
 - tune throne sitting on Pixel screenshot evidence
