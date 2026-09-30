@@ -1,4 +1,4 @@
-# Current State — V20 Living World
+# Current State — V21 Living World
 
 Date: 2026-09-29
 
@@ -147,3 +147,10 @@ V19 adds shared body-only character bounds that exclude the weapon hierarchy fro
 V19 fixed the king body scale, leaving the crown as the final visible defect. Direct Blender measurement of the guard asset shows the animated head origin at raw Z 1.571696 and the visible skin-head mesh top at 1.831376, an offset of about 0.260 units. The prior crown offset of 0.18 therefore placed most of the crown inside the head.
 
 V20 places the crown at a measured 0.278 local head offset so the band overlaps the skull top only slightly, removes the obsolete inverse-scale compensation, and sizes the band to 0.13 radius with 0.11 spikes so it is readable on the roughly 0.303-unit-wide guard head. The crown remains parented to the animated head and automatically disappears in first-person when the player visual is hidden.
+
+
+## V21 masculine king face
+
+V21 keeps the corrected V19 body scale and V20 crown, and adds the missing facial anatomy directly to the animated head. The procedural low-poly face is sized from the measured guard head (about 0.303 units wide) and adds a broader square jaw/chin, short boxed stubble with sideburns/moustache, two deep-set eyes with irises/pupils, heavier angled brows, a straight projected nose, firm neutral mouth/lower lip, and philtrum shading.
+
+The face group is parented to the animated head, so it follows head motion and is automatically hidden with the player visual in first-person. The intent is a mature, stern, masculine king while preserving the existing low-poly art style and mobile performance.

@@ -18,6 +18,22 @@ export const KING_REGALIA={
   crownBandHeight:.065,
 };
 
+
+export const KING_FACE={
+  frontY:-.137,
+  eyeX:.057,
+  eyeZ:.135,
+  eyeRadius:.020,
+  browZ:.176,
+  browWidth:.068,
+  noseTipY:-.174,
+  mouthZ:.012,
+  jawTopZ:.060,
+  jawBottomZ:-.060,
+  jawTopHalfWidth:.108,
+  jawBottomHalfWidth:.112,
+};
+
 export const KING_CAMERA={
   fov:66,
   defaultMode:'third',

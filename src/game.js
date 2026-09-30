@@ -12,7 +12,7 @@ import {populateWorld,snapshotActors} from './sim/population.js';
 import {createLivingRenderer} from './render/living.js';
 import {createWorldGeometry} from './render/world.js';
 import {fitCharacterHeight} from './render/characterBounds.js';
-import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_CAMERA} from './presentation.js';
+import {KING_HEIGHT_M,KING_REGALIA_SCALE,KING_REGALIA,KING_FACE,KING_CAMERA} from './presentation.js';
 
 const $=id=>document.getElementById(id);
 const game=$('game'),beginBtn=$('begin'),intro=$('intro'),interactBtn=$('interact'),ordersBtn=$('orders'),attackBtn=$('attack'),cameraModeBtn=$('cameraMode'),nearbyEl=$('nearby'),dialogue=$('dialogue'),speakerRole=$('speakerRole'),speakerName=$('speakerName'),dialogueText=$('dialogueText'),choicesEl=$('choices'),leaveDialogue=$('leaveDialogue'),objectiveEl=$('objective'),toastEl=$('toast'),warStatusEl=$('warStatus');
@@ -149,8 +149,12 @@ async function loadPlayer(){
     player.updateMatrixWorld(true);playerVisual.updateMatrixWorld(true);
     if(torso){torso.updateMatrixWorld(true);torso.attach(royalRegalia)}
     const crown=makeRoyalCrown();
-    if(kingHead){crown.position.set(0,KING_REGALIA.crownHeadOffset,0);kingHead.add(crown)}
-    else{crown.position.set(0,1.76,0);royalRegalia.add(crown)}
+    if(kingHead){
+      crown.position.set(0,KING_REGALIA.crownHeadOffset,0);kingHead.add(crown);
+      kingHead.add(makeMasculineKingFace())
+    } else {
+      crown.position.set(0,1.76,0);royalRegalia.add(crown)
+    }
     syncCameraMode();
     if(g.animations?.length){
       playerMixer=new THREE.AnimationMixer(playerVisual);
@@ -168,6 +172,87 @@ async function loadPlayer(){
     body.position.y=.9;body.castShadow=true;player.add(body);playerVisual=body;addRoyalRegalia();const c=makeRoyalCrown();c.position.set(0,1.76,0);royalRegalia.add(c);
   }
   loadedEssential++;checkReady()
+}
+function makeMasculineKingFace(){
+  const g=new THREE.Group();g.name='king-face';g.userData.isKingFace=true;
+  const skin=new THREE.MeshStandardMaterial({color:0xbf8b62,roughness:.76,metalness:0});
+  const skinShadow=new THREE.MeshStandardMaterial({color:0x9a6749,roughness:.82,metalness:0});
+  const white=new THREE.MeshStandardMaterial({color:0xded6c8,roughness:.66,metalness:0});
+  const iris=new THREE.MeshStandardMaterial({color:0x3f2b1c,roughness:.5,metalness:0});
+  const pupil=new THREE.MeshStandardMaterial({color:0x100c09,roughness:.72});
+  const hair=new THREE.MeshStandardMaterial({color:0x342117,roughness:.86,metalness:0});
+  const stubble=new THREE.MeshStandardMaterial({color:0x39271f,roughness:.94,metalness:0});
+  const lip=new THREE.MeshStandardMaterial({color:0x57302a,roughness:.84,metalness:0});
+
+  // One integrated tapered jaw shell replaces the earlier detached cheek blocks.
+  // It sits partly inside the stock head and widens the lower face into a more
+  // adult, square silhouette without changing the skull/crown proportions.
+  const f=KING_FACE.frontY;
+  const jt=KING_FACE.jawTopZ,jb=KING_FACE.jawBottomZ;
+  const wt=KING_FACE.jawTopHalfWidth,wb=KING_FACE.jawBottomHalfWidth;
+  const jawGeo=new THREE.BufferGeometry();
+  const jv=[-wt,f-.012,jt, wt,f-.012,jt, -wb,f-.014,jb, wb,f-.014,jb];
+  jawGeo.setAttribute('position',new THREE.Float32BufferAttribute(jv,3));
+  jawGeo.setIndex([0,2,1,1,2,3]);jawGeo.computeVertexNormals();
+  const jaw=new THREE.Mesh(jawGeo,skin);jaw.castShadow=true;g.add(jaw);
+
+  // Short boxed stubble on the lowest jaw/chin only; it reinforces the square
+  // structure but leaves the mouth and cheeks readable.
+  const beardGeo=new THREE.BufferGeometry();
+  const bv=[
+    -.094,f-.019,.026, .094,f-.019,.026, -.102,f-.020,-.058, .102,f-.020,-.058
+  ];
+  beardGeo.setAttribute('position',new THREE.Float32BufferAttribute(bv,3));beardGeo.setIndex([0,2,1,1,2,3]);beardGeo.computeVertexNormals();
+  g.add(new THREE.Mesh(beardGeo,stubble));
+
+  // Smaller, deeper-set eyes with readable brown irises and dark pupils.
+  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,10,7),white);
+    eye.scale.set(1.30,.34,.66);eye.position.set(x,f-.004,KING_FACE.eyeZ);g.add(eye);
+    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0108,8,6),iris);
+    ir.scale.set(.9,.28,1);ir.position.set(x,f-.021,KING_FACE.eyeZ);g.add(ir);
+    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0056,7,5),pupil);
+    pu.scale.set(.9,.24,1);pu.position.set(x,f-.027,KING_FACE.eyeZ);g.add(pu)
+  }
+
+  // Heavy brows with a stronger inward slope for a stern, mature expression.
+  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.010,.018),hair);
+    brow.position.set(x,f-.023,KING_FACE.browZ);
+    brow.rotation.y=x<0?-.22:.22;g.add(brow)
+  }
+
+  // Straight compact low-poly nose: defined bridge, restrained projection.
+  const noseGeo=new THREE.BufferGeometry();
+  const v=[
+    -.021,f-.002,.150, .021,f-.002,.150,
+    -.027,f-.003,.066, .027,f-.003,.066,
+     0,KING_FACE.noseTipY,.062,
+    -.018,f-.006,.037, .018,f-.006,.037
+  ];
+  const nf=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
+  noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));noseGeo.setIndex(nf);noseGeo.computeVertexNormals();
+  const nose=new THREE.Mesh(noseGeo,skinShadow);nose.castShadow=true;g.add(nose);
+
+  // Short boxed facial hair: subtle sideburns and a split moustache frame the
+  // square jaw without covering the facial anatomy.
+  for(const x of [-.105,.105]){
+    const sideburn=new THREE.Mesh(new THREE.BoxGeometry(.016,.006,.055),stubble);
+    sideburn.position.set(x,f-.018,.055);g.add(sideburn)
+  }
+  for(const x of [-.020,.020]){
+    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.040,.006,.010),stubble);
+    moustache.position.set(x,f-.019,KING_FACE.mouthZ+.030);
+    moustache.rotation.y=x<0?-.10:.10;g.add(moustache)
+  }
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.084,.007,.010),lip);
+  mouth.position.set(0,f-.024,KING_FACE.mouthZ);g.add(mouth);
+  const lower=new THREE.Mesh(new THREE.BoxGeometry(.068,.006,.010),skinShadow);
+  lower.position.set(0,f-.020,KING_FACE.mouthZ-.018);g.add(lower);
+  const philtrum=new THREE.Mesh(new THREE.BoxGeometry(.015,.005,.020),skinShadow);
+  philtrum.position.set(0,f-.016,KING_FACE.mouthZ+.052);g.add(philtrum);
+
+  return g
 }
 function makeRoyalCrown(){
   const g=new THREE.Group();g.name='royal-crown';g.userData.isRoyalCrown=true;const gold=new THREE.MeshStandardMaterial({color:0xe4bc55,metalness:.84,roughness:.2}),ruby=new THREE.MeshStandardMaterial({color:0xa71932,metalness:.2,roughness:.26});
@@ -666,7 +751,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v20-visible-crown',
+    version:'v21-masculine-face',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},
