@@ -1,4 +1,4 @@
-# Current State — V22 Living World
+# Current State — V23 Living World
 
 Date: 2026-09-29
 
@@ -161,3 +161,10 @@ The face group is parented to the animated head, so it follows head motion and i
 The V21 phone screenshot confirmed that the face geometry was attached correctly but still read too flat at real mobile gameplay distance. V22 changes only the face. It increases eye/socket contrast, enlarges iris/pupil readability, thickens and angles the brows, adds angular cheekbone shadows, strengthens the projected straight nose with a side-shadow plane, broadens the jaw/chin silhouette, and increases the visibility of the boxed stubble, sideburns, moustache and firm mouth line.
 
 Body scale, crown placement, regalia, camera distances and HUD layout remain unchanged from the corrected V19–V21 state.
+
+
+## V23 generated-reference face pass
+
+The V22 phone screenshot showed the facial overlay was still too weak at gameplay scale. V23 explicitly follows the stronger first generated Blender-style king reference: short dark-brown hair under the crown, thick stern brows, larger readable blue-gray eyes, a straight angular nose, firm mouth, broad square jaw, and a full trimmed brown beard with sideburns and moustache.
+
+Only the head/face treatment changes. The corrected body scale, crown placement, regalia, camera distances and mobile HUD remain unchanged.

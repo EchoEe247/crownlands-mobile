@@ -15,7 +15,7 @@ assert.ok(KING_REGALIA.crownHeadOffset>=.27&&KING_REGALIA.crownHeadOffset<=.29,'
 assert.ok(KING_FACE.frontY<=-.125&&KING_FACE.frontY>=-.14,'king face must sit just outside the measured front of the head');
 assert.ok(KING_FACE.eyeX>=.05&&KING_FACE.eyeX<=.065,'eyes must have adult masculine spacing on the measured head width');
 assert.ok(KING_FACE.jawBottomHalfWidth>=.10&&KING_FACE.jawBottomHalfWidth<=.12,'lower jaw must be broad but remain inside the measured head width');
-assert.ok(KING_FACE.noseTipY<KING_FACE.frontY-.04&&KING_FACE.noseTipY>KING_FACE.frontY-.06,'nose must project clearly without becoming exaggerated');
+assert.ok((KING_FACE.frontY-KING_FACE.noseTipY)>=.045&&(KING_FACE.frontY-KING_FACE.noseTipY)<=.065,'nose must project clearly without becoming exaggerated');
 assert.ok(KING_CAMERA.fov>=64&&KING_CAMERA.fov<=70,'camera FOV must retain useful environment context');
 assert.equal(KING_CAMERA.defaultMode,'third','mobile gameplay must start in third person');
 assert.ok(KING_CAMERA.third.standingDistance>=3.7&&KING_CAMERA.third.standingDistance<=4.1,'third-person camera should be close enough for mobile character readability');
@@ -38,7 +38,7 @@ assert.match(gameSource,/g\.name='royal-crown'/,'crown must have an explicit run
 assert.match(gameSource,/torso\.attach\(royalRegalia\)/,'royal clothing must follow the animated torso');
 assert.match(gameSource,/function resizeView\(\)/,'camera must update renderer size and aspect on device rotation');
 assert.match(gameSource,/fitCharacterHeight\(playerVisual,KING_HEIGHT_M\)/,'player scale must be fitted from humanoid body bounds rather than held equipment');
-assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n\.startsWith\('weapon'\)/,'guard helmet shells and every guard-weapon descendant must be hidden from the king base');
+assert.match(gameSource,/n==='face'\|\|n==='hair'\|\|n==='head\.001'\|\|n\.startsWith\('weapon'\)/,'blank stock head/helmet shells and every guard-weapon descendant must be hidden from the king base');
 assert.match(cssSource,/@media \(orientation:landscape\)/,'landscape HUD override must exist');
 assert.match(cssSource,/#objective\{top:54px;padding:5px 11px\}/,'landscape objective must be raised');
 const livingSource=readFileSync(new URL('../src/render/living.js',import.meta.url),'utf8');
@@ -49,13 +49,23 @@ assert.doesNotMatch(gameSource,/new THREE\.SphereGeometry\(KING_REGALIA\.pauldro
 assert.doesNotMatch(gameSource,/new THREE\.CylinderGeometry\(\.016,\.020,\.38/,'king must not add a detached procedural scabbard');
 
 assert.match(gameSource,/makeMasculineKingFace\(\)/,'runtime must construct the detailed king face');
-assert.match(gameSource,/g\.name='king-face-v22'/,'face group must have an explicit runtime identity');
-assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,12,8\)/,'face must include modeled eyes');
+assert.match(gameSource,/g\.name='king-face-reference-v23'/,'face group must have an explicit runtime identity');
+assert.match(gameSource,/new THREE\.SphereGeometry\(KING_FACE\.eyeRadius,12,8\)/,'face must include modeled readable eyes');
 assert.match(gameSource,/const noseGeo=new THREE\.BufferGeometry\(\)/,'face must include a modeled nose');
 assert.match(gameSource,/const mouth=new THREE\.Mesh/,'face must include a modeled mouth');
-assert.match(gameSource,/const jawGeo=new THREE\.BufferGeometry\(\)/,'face must include integrated jaw/chin structure');
+assert.match(gameSource,/king-square-chin/,'face must include integrated square jaw/chin structure');
 
-assert.match(gameSource,/Angular cheekbone shadows/,'face must include angular cheekbone structure');
-assert.match(gameSource,/Dark shallow eye sockets/,'face must include readable eye sockets');
-assert.match(gameSource,/noseShade/,'face must include nose-side contrast for mobile readability');
-assert.match(gameSource,/Split moustache, firm mouth line/,'face must include deliberate mouth and facial-hair structure');
+assert.match(gameSource,/Short dark-brown hair under the crown/,'face must include reference-inspired short hair');
+assert.match(gameSource,/Deep-set readable eyes/,'face must include mobile-readable eyes');
+assert.match(gameSource,/Straight angular nose/,'face must include a defined straight nose');
+assert.match(gameSource,/Full trimmed beard:/,'face must include a full trimmed beard');
+
+assert.match(gameSource,/king-hair-cap/,'reference-inspired king face must include short brown hair');
+assert.match(gameSource,/king-trimmed-beard/,'reference-inspired king face must include a full trimmed beard');
+assert.match(gameSource,/color:0x426274/,'reference-inspired face must use readable blue-gray irises');
+assert.ok(KING_FACE.eyeRadius>=.021,'eyes must remain visible at mobile gameplay distance without looking oversized');
+assert.ok(KING_FACE.noseTipY<=-.18,'nose must have a clearly projected masculine profile');
+assert.match(gameSource,/king-head-base/,'reference face must replace the blank stock head with a coherent custom head');
+assert.match(gameSource,/king-square-chin/,'reference face must include a square masculine chin');
+assert.match(gameSource,/king-straight-nose/,'reference face must include a defined straight nose');
+assert.match(gameSource,/const temple=new THREE\.Mesh/,'reference-inspired face must include short side hair at the temples');

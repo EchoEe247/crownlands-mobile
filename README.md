@@ -42,7 +42,7 @@ cd ~/MainWorkspace/crownlands-mobile
 Open in Android Chrome:
 
 ```
-http://127.0.0.1:5205/?v=22
+http://127.0.0.1:5205/?v=23
 ```
 
 Controls:
