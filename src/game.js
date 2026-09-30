@@ -174,83 +174,104 @@ async function loadPlayer(){
   loadedEssential++;checkReady()
 }
 function makeMasculineKingFace(){
-  const g=new THREE.Group();g.name='king-face';g.userData.isKingFace=true;
-  const skin=new THREE.MeshStandardMaterial({color:0xbf8b62,roughness:.76,metalness:0});
-  const skinShadow=new THREE.MeshStandardMaterial({color:0x9a6749,roughness:.82,metalness:0});
-  const white=new THREE.MeshStandardMaterial({color:0xded6c8,roughness:.66,metalness:0});
-  const iris=new THREE.MeshStandardMaterial({color:0x3f2b1c,roughness:.5,metalness:0});
-  const pupil=new THREE.MeshStandardMaterial({color:0x100c09,roughness:.72});
-  const hair=new THREE.MeshStandardMaterial({color:0x342117,roughness:.86,metalness:0});
-  const stubble=new THREE.MeshStandardMaterial({color:0x39271f,roughness:.94,metalness:0});
-  const lip=new THREE.MeshStandardMaterial({color:0x57302a,roughness:.84,metalness:0});
+  const g=new THREE.Group();g.name='king-face-v22';g.userData.isKingFace=true;
+  const skin=new THREE.MeshStandardMaterial({color:0xbf8b62,roughness:.74,metalness:0});
+  const skinShadow=new THREE.MeshStandardMaterial({color:0x8d5c43,roughness:.86,metalness:0});
+  const eyeWhite=new THREE.MeshStandardMaterial({color:0xf1e7d5,roughness:.58,metalness:0});
+  const iris=new THREE.MeshStandardMaterial({color:0x5b351e,roughness:.46,metalness:0});
+  const pupil=new THREE.MeshStandardMaterial({color:0x090706,roughness:.68});
+  const hair=new THREE.MeshStandardMaterial({color:0x261710,roughness:.88,metalness:0});
+  const stubble=new THREE.MeshStandardMaterial({color:0x3a2720,roughness:.95,metalness:0});
+  const lip=new THREE.MeshStandardMaterial({color:0x4d2421,roughness:.86,metalness:0});
 
-  // One integrated tapered jaw shell replaces the earlier detached cheek blocks.
-  // It sits partly inside the stock head and widens the lower face into a more
-  // adult, square silhouette without changing the skull/crown proportions.
   const f=KING_FACE.frontY;
   const jt=KING_FACE.jawTopZ,jb=KING_FACE.jawBottomZ;
   const wt=KING_FACE.jawTopHalfWidth,wb=KING_FACE.jawBottomHalfWidth;
+
+  // Square adult jaw/chin plane, deliberately broad at the bottom.
   const jawGeo=new THREE.BufferGeometry();
-  const jv=[-wt,f-.012,jt, wt,f-.012,jt, -wb,f-.014,jb, wb,f-.014,jb];
-  jawGeo.setAttribute('position',new THREE.Float32BufferAttribute(jv,3));
+  jawGeo.setAttribute('position',new THREE.Float32BufferAttribute([
+    -wt,f-.014,jt, wt,f-.014,jt,
+    -wb,f-.016,jb, wb,f-.016,jb
+  ],3));
   jawGeo.setIndex([0,2,1,1,2,3]);jawGeo.computeVertexNormals();
   const jaw=new THREE.Mesh(jawGeo,skin);jaw.castShadow=true;g.add(jaw);
 
-  // Short boxed stubble on the lowest jaw/chin only; it reinforces the square
-  // structure but leaves the mouth and cheeks readable.
-  const beardGeo=new THREE.BufferGeometry();
-  const bv=[
-    -.094,f-.019,.026, .094,f-.019,.026, -.102,f-.020,-.058, .102,f-.020,-.058
-  ];
-  beardGeo.setAttribute('position',new THREE.Float32BufferAttribute(bv,3));beardGeo.setIndex([0,2,1,1,2,3]);beardGeo.computeVertexNormals();
-  g.add(new THREE.Mesh(beardGeo,stubble));
-
-  // Smaller, deeper-set eyes with readable brown irises and dark pupils.
-  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,10,7),white);
-    eye.scale.set(1.30,.34,.66);eye.position.set(x,f-.004,KING_FACE.eyeZ);g.add(eye);
-    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0108,8,6),iris);
-    ir.scale.set(.9,.28,1);ir.position.set(x,f-.021,KING_FACE.eyeZ);g.add(ir);
-    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0056,7,5),pupil);
-    pu.scale.set(.9,.24,1);pu.position.set(x,f-.027,KING_FACE.eyeZ);g.add(pu)
+  // Jaw corners add a little silhouette thickness while remaining embedded in the head.
+  for(const x of [-KING_FACE.jawBottomHalfWidth,KING_FACE.jawBottomHalfWidth]){
+    const corner=new THREE.Mesh(new THREE.BoxGeometry(.020,.024,.105),skinShadow);
+    corner.position.set(x,f+.003,-.010);
+    corner.rotation.y=x<0?-.08:.08;g.add(corner)
   }
 
-  // Heavy brows with a stronger inward slope for a stern, mature expression.
-  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
-    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.010,.018),hair);
-    brow.position.set(x,f-.023,KING_FACE.browZ);
-    brow.rotation.y=x<0?-.22:.22;g.add(brow)
+  // Angular cheekbone shadows keep the face from reading round/baby-faced.
+  for(const x of [-KING_FACE.cheekX,KING_FACE.cheekX]){
+    const cheek=new THREE.Mesh(new THREE.BoxGeometry(.058,.009,.030),skinShadow);
+    cheek.position.set(x,f-.019,KING_FACE.cheekZ);
+    cheek.rotation.y=x<0?-.13:.13;g.add(cheek)
   }
 
-  // Straight compact low-poly nose: defined bridge, restrained projection.
+  // Dark shallow eye sockets + bright eyes improve readability at phone scale.
+  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
+    const socket=new THREE.Mesh(new THREE.BoxGeometry(.060,.008,.031),skinShadow);
+    socket.position.set(x,f-.017,KING_FACE.eyeZ);g.add(socket);
+
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(KING_FACE.eyeRadius,12,8),eyeWhite);
+    eye.scale.set(1.28,.34,.62);eye.position.set(x,f-.026,KING_FACE.eyeZ);g.add(eye);
+
+    const ir=new THREE.Mesh(new THREE.SphereGeometry(.0125,9,7),iris);
+    ir.scale.set(.92,.26,1);ir.position.set(x,f-.041,KING_FACE.eyeZ);g.add(ir);
+
+    const pu=new THREE.Mesh(new THREE.SphereGeometry(.0064,8,6),pupil);
+    pu.scale.set(.92,.22,1);pu.position.set(x,f-.048,KING_FACE.eyeZ);g.add(pu)
+  }
+
+  // Thick, dark brows with inward downward angle create a mature stern expression.
+  for(const x of [-KING_FACE.eyeX,KING_FACE.eyeX]){
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(KING_FACE.browWidth,.012,.020),hair);
+    brow.position.set(x,f-.032,KING_FACE.browZ);
+    brow.rotation.y=x<0?-.24:.24;g.add(brow)
+  }
+
+  // Projected straight nose with a darker side plane for shape at low resolution.
   const noseGeo=new THREE.BufferGeometry();
   const v=[
-    -.021,f-.002,.150, .021,f-.002,.150,
-    -.027,f-.003,.066, .027,f-.003,.066,
-     0,KING_FACE.noseTipY,.062,
-    -.018,f-.006,.037, .018,f-.006,.037
+    -.022,f-.006,.157, .022,f-.006,.157,
+    -.030,f-.008,.066, .030,f-.008,.066,
+     0,KING_FACE.noseTipY,.058,
+    -.020,f-.010,.031, .020,f-.010,.031
   ];
   const nf=[0,2,4,0,4,1,1,4,3,2,5,4,4,6,3,5,6,4,0,1,3,0,3,2];
   noseGeo.setAttribute('position',new THREE.Float32BufferAttribute(v,3));noseGeo.setIndex(nf);noseGeo.computeVertexNormals();
-  const nose=new THREE.Mesh(noseGeo,skinShadow);nose.castShadow=true;g.add(nose);
+  const nose=new THREE.Mesh(noseGeo,skin);nose.castShadow=true;g.add(nose);
+  const noseShade=new THREE.Mesh(new THREE.BoxGeometry(.010,.008,.072),skinShadow);
+  noseShade.position.set(.020,f-.016,.098);g.add(noseShade);
 
-  // Short boxed facial hair: subtle sideburns and a split moustache frame the
-  // square jaw without covering the facial anatomy.
-  for(const x of [-.105,.105]){
-    const sideburn=new THREE.Mesh(new THREE.BoxGeometry(.016,.006,.055),stubble);
-    sideburn.position.set(x,f-.018,.055);g.add(sideburn)
+  // Stronger boxed beard/stubble around jaw/chin, restrained enough to leave anatomy visible.
+  const beardGeo=new THREE.BufferGeometry();
+  beardGeo.setAttribute('position',new THREE.Float32BufferAttribute([
+    -.102,f-.024,.032, .102,f-.024,.032,
+    -.110,f-.026,-.071, .110,f-.026,-.071
+  ],3));
+  beardGeo.setIndex([0,2,1,1,2,3]);beardGeo.computeVertexNormals();
+  g.add(new THREE.Mesh(beardGeo,stubble));
+  for(const x of [-.108,.108]){
+    const sideburn=new THREE.Mesh(new THREE.BoxGeometry(.018,.008,.066),stubble);
+    sideburn.position.set(x,f-.024,.063);g.add(sideburn)
   }
-  for(const x of [-.020,.020]){
-    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.040,.006,.010),stubble);
-    moustache.position.set(x,f-.019,KING_FACE.mouthZ+.030);
-    moustache.rotation.y=x<0?-.10:.10;g.add(moustache)
+
+  // Split moustache, firm mouth line and defined lower lip.
+  for(const x of [-.023,.023]){
+    const moustache=new THREE.Mesh(new THREE.BoxGeometry(.044,.008,.012),stubble);
+    moustache.position.set(x,f-.029,KING_FACE.mouthZ+.034);
+    moustache.rotation.y=x<0?-.13:.13;g.add(moustache)
   }
-  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.084,.007,.010),lip);
-  mouth.position.set(0,f-.024,KING_FACE.mouthZ);g.add(mouth);
-  const lower=new THREE.Mesh(new THREE.BoxGeometry(.068,.006,.010),skinShadow);
-  lower.position.set(0,f-.020,KING_FACE.mouthZ-.018);g.add(lower);
-  const philtrum=new THREE.Mesh(new THREE.BoxGeometry(.015,.005,.020),skinShadow);
-  philtrum.position.set(0,f-.016,KING_FACE.mouthZ+.052);g.add(philtrum);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(.094,.010,.011),lip);
+  mouth.position.set(0,f-.034,KING_FACE.mouthZ);g.add(mouth);
+  const lowerLip=new THREE.Mesh(new THREE.BoxGeometry(.072,.007,.011),skinShadow);
+  lowerLip.position.set(0,f-.030,KING_FACE.mouthZ-.020);g.add(lowerLip);
+  const philtrum=new THREE.Mesh(new THREE.BoxGeometry(.017,.006,.023),skinShadow);
+  philtrum.position.set(0,f-.024,KING_FACE.mouthZ+.058);g.add(philtrum);
 
   return g
 }
@@ -751,7 +772,7 @@ function bootProgressive(){
 }
 window.__crownlandsDebug={
   snapshot:()=>({
-    version:'v21-masculine-face',
+    version:'v22-face-readability',
     ready,
     fps:Math.round(fpsEMA),
     player:{x:+player.position.x.toFixed(2),z:+player.position.z.toFixed(2),yaw:+player.rotation.y.toFixed(2),seated,heightTarget:KING_HEIGHT_M},

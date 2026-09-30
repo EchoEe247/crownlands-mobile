@@ -1,4 +1,4 @@
-# Current State — V21 Living World
+# Current State — V22 Living World
 
 Date: 2026-09-29
 
@@ -154,3 +154,10 @@ V20 places the crown at a measured 0.278 local head offset so the band overlaps 
 V21 keeps the corrected V19 body scale and V20 crown, and adds the missing facial anatomy directly to the animated head. The procedural low-poly face is sized from the measured guard head (about 0.303 units wide) and adds a broader square jaw/chin, short boxed stubble with sideburns/moustache, two deep-set eyes with irises/pupils, heavier angled brows, a straight projected nose, firm neutral mouth/lower lip, and philtrum shading.
 
 The face group is parented to the animated head, so it follows head motion and is automatically hidden with the player visual in first-person. The intent is a mature, stern, masculine king while preserving the existing low-poly art style and mobile performance.
+
+
+## V22 face readability pass
+
+The V21 phone screenshot confirmed that the face geometry was attached correctly but still read too flat at real mobile gameplay distance. V22 changes only the face. It increases eye/socket contrast, enlarges iris/pupil readability, thickens and angles the brows, adds angular cheekbone shadows, strengthens the projected straight nose with a side-shadow plane, broadens the jaw/chin silhouette, and increases the visibility of the boxed stubble, sideburns, moustache and firm mouth line.
+
+Body scale, crown placement, regalia, camera distances and HUD layout remain unchanged from the corrected V19–V21 state.
